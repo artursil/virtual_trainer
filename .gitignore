@@ -1,5 +1,6 @@
 videos/
 images/
+connector/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
