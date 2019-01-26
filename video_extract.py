@@ -1,18 +1,30 @@
 from utils import *
+import youtube_dl
 
 class VideoScraper:
-    def __init__(self,url,base_path,exercise,quality="mp4", *args, **kwargs):
-        self.url=url
+    def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
+        self.video_type = video_type
+        self.url=self.__get_url(url)
         self.base_path = base_path
         self.quality = quality
         self.exercise = exercise
-        self.video = pafy.new(url)
-        self.stream = self.select_stream()
-        self.filename = self.generate_filename()
+        if self.video_type=="youtube":
+            self.video = pafy.new(self.url)
+            self.stream = self.select_stream()
+            self.filename = self.generate_filename()
+        else:
+            self.filename = kwargs.get("filename")
+        
         self.filepath = self.generate_filepath()
         self.clipped_path = self.clip_path()
 
     def download_video(self,quiet=True):
+        if self.video_type=="youtube":
+            self.__download_yt_video(quiet)
+        else:
+            self.__download_other_video()
+
+    def __download_yt_video(self,quiet=True):
         stream = self.select_stream()
         filepath = f'{self.base_path}videos/{self.exercise}/'
         if os.path.isdir(filepath)==False:
@@ -21,6 +33,28 @@ class VideoScraper:
             print('File already exists')
         else:
             stream.download(filepath,quiet)
+
+    def __download_other_video(self):
+        ydl_opts = {'outtmpl': f"{self.base_path}videos/{self.exercise}/{self.filename}.%(ext)s",
+                    'nooverwrites':True,
+                    'quiet':True}
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([self.url, ])
+        self.__delete_audio_files()
+
+    def __delete_audio_files(self):
+        filepath = f'{self.base_path}videos/{self.exercise}/'
+        files = os.listdir(filepath)
+        audio_files = [x for x in files if x.lower().find("audio")>-1]
+        for audio_file in audio_files:
+            os.remove(f'{filepath}{audio_file}')
+
+    def __get_url(self,url):
+        if self.video_type=="youtube":
+            _url = url.replace("%3D","=").replace("%3F","?")
+            _url = re.sub(r"(?<=com/).+(?=watch)","",_url)
+            url = _url.split("%")[0]
+        return url
 
     def clip_video(self,start_t,end_t):
         if os.path.isfile(self.filepath):

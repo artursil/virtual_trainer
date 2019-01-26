@@ -1,5 +1,8 @@
 videos/
 images/
+connector/
+testing.py
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
