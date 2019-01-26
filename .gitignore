@@ -3,6 +3,7 @@ images/
 connector/
 testing.py
 .vscode/
+metadata.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

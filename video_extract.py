@@ -8,10 +8,16 @@ class VideoScraper:
         self.base_path = base_path
         self.quality = quality
         self.exercise = exercise
+        self.error = False
         if self.video_type=="youtube":
-            self.video = pafy.new(self.url)
-            self.stream = self.select_stream()
-            self.filename = self.generate_filename()
+            try:
+                self.video = pafy.new(self.url)
+            except OSError:
+                self.error = True
+                self.filename = None
+            else:               
+                self.stream = self.select_stream()
+                self.filename = self.generate_filename()
         else:
             self.filename = kwargs.get("filename")
         
@@ -19,10 +25,16 @@ class VideoScraper:
         self.clipped_path = self.clip_path()
 
     def download_video(self,quiet=True):
-        if self.video_type=="youtube":
-            self.__download_yt_video(quiet)
+        try:
+            if self.video_type=="youtube":
+                self.__download_yt_video(quiet)
+            else:
+                self.__download_other_video()
+        except:
+            print(f"Problem with this url: {self.url}")
+            return False
         else:
-            self.__download_other_video()
+            return True
 
     def __download_yt_video(self,quiet=True):
         stream = self.select_stream()
@@ -38,9 +50,13 @@ class VideoScraper:
         ydl_opts = {'outtmpl': f"{self.base_path}videos/{self.exercise}/{self.filename}.%(ext)s",
                     'nooverwrites':True,
                     'quiet':True}
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.url, ])
-        self.__delete_audio_files()
+        if os.path.isfile(self.filepath):
+            print('File already exists')
+        else:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([self.url, ])
+                    # raise ValueError(f"Problem with this url: {self.url}")
+            self.__delete_audio_files()
 
     def __delete_audio_files(self):
         filepath = f'{self.base_path}videos/{self.exercise}/'
@@ -69,7 +85,7 @@ class VideoScraper:
         my_clip = self.clip_video(start_t,end_t)
         if os.path.isdir("/".join(self.clipped_path.split("/")[:-1]))==False:
             os.makedirs("/".join(self.clipped_path.split("/")[:-1]))
-        if os.path.isfile(self.clipped_path ):
+        if os.path.isfile(self.clipped_path):
             print("Clipped version of this file exists")
         else:
             my_clip.write_videofile(self.clipped_path)
