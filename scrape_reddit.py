@@ -16,27 +16,38 @@ reddit = praw.Reddit(client_id=CLIENT_ID, \
                      password=RDT_PASS)
 rdt_channel = 'formcheck' # subreddit channel
 cutoff = 5 # max number of submissions  to gather
-scrape_dict = { "title": [], 
+
+def update_dict(scrape_dict,submission):
+    scrape_dict["title"].append(submission.title)
+    scrape_dict["score"].append(submission.score)
+    scrape_dict["url"].append(submission.url)
+    scrape_dict["is_video"].append(submission.is_video)
+    if submission.is_video == True : 
+        scrape_dict["duration"].append(submission.secure_media["reddit_video"]["duration"])
+    else :
+        scrape_dict["duration"].append(0)
+    scrape_dict["link_flair_text"].append(submission.link_flair_text)
+    return scrape_dict  
+
+def scrape_rdt(cutoff,only_top=False):
+    scrape_dict = { "title": [], 
                 "score": [], 
                 "url": [],  
                 "is_video": [],
                 "duration": [], 
                 "link_flair_text": [] }
-
-def scrape_rdt(cutoff):
     # Get Reddit submissions
     subreddit = reddit.subreddit(rdt_channel) # select Reddit channel
     for submission in subreddit.top(limit=cutoff):
-        scrape_dict["title"].append(submission.title)
-        scrape_dict["score"].append(submission.score)
-        scrape_dict["url"].append(submission.url)
-        scrape_dict["is_video"].append(submission.is_video)
-        if submission.is_video == True : 
-            scrape_dict["duration"].append(submission.secure_media["reddit_video"]["duration"])
-        else :
-            scrape_dict["duration"].append(0)
-        scrape_dict["link_flair_text"].append(submission.link_flair_text)
-    return pd.DataFrame(scrape_dict)
+        scrape_dict = update_dict(scrape_dict,submission)
+    if only_top==False:
+        for submission in subreddit.hot(limit=cutoff):
+            scrape_dict = update_dict(scrape_dict,submission)
+        for submission in subreddit.new(limit=cutoff):
+            scrape_dict = update_dict(scrape_dict,submission)
+    scrp_df = pd.DataFrame(scrape_dict)
+    scrp_df.drop_duplicates(inplace=True)
+    return scrp_df
 
 
 
@@ -53,8 +64,9 @@ def get_reps(title):
         reps_n=1
     return reps_n
 
-def filter_df(df,stop_words):
+def filter_df(df,stop_words,score=0):
     df_tmp = df.copy()
+    df_tmp = df_tmp[df_tmp['score']>=score]
     df_tmp = df_tmp[df_tmp["duration"]<=60]
     df_tmp['insta'] = [x.find("instagram")>-1 for x in df_tmp['url']]
     df_tmp['yt'] = [x.find("youtube")>-1 for x in df_tmp['url']]
@@ -82,29 +94,36 @@ def filter_df(df,stop_words):
 parser = argparse.ArgumentParser()
 parser.add_argument('--path','-p', help='Path where videos should be saved')
 parser.add_argument('--number-of-posts','-n',type=int,default=10, help='Number of reddit posts to scrape')
+parser.add_argument('--score-cutoff','-sc',type=int,default=10, help='TODO')
+parser.add_argument('--only-top',action='store_true', help='TODO')
+parser.add_argument('--no-download','-nd',action='store_false', help='TODO')
 
 args = parser.parse_args()
 
 def main():
     base_path = args.path
     cutoff = args.number_of_posts
+    score = args.score_cutoff
+    only_top = args.only_top
     stop_words=["sumo","?","advice"]
-    scrape_df = scrape_rdt(cutoff)
+    scrape_df = scrape_rdt(cutoff,only_top)
     print(f"Number of posts: {len(scrape_df)}")
-    filtered_df = filter_df(scrape_df,stop_words)
+    filtered_df = filter_df(scrape_df,stop_words,score)
     print(f"Number of posts after filtering: {len(filtered_df)}")
-    for _,row in tqdm(filtered_df.iterrows()):
-        if row["squat"] ==True:
-            exercise="squat"
-        else:
-            exercise="deadlift"
-        url = row["url"]
-        title = slugify(row['title'])
-        if row["yt"]==True:
-            video = VideoScraper(url,base_path,exercise,video_type="youtube")
-        else:
-            video = VideoScraper(url,base_path,exercise,video_type="reddit",filename=title)
-        video.download_video()
+
+    if args.no_download:
+        for _,row in tqdm(filtered_df.iterrows()):
+            if row["squat"] ==True:
+                exercise="squat"
+            else:
+                exercise="deadlift"
+            url = row["url"]
+            title = slugify(row['title'])
+            if row["yt"]==True:
+                video = VideoScraper(url,base_path,exercise,video_type="youtube")
+            else:
+                video = VideoScraper(url,base_path,exercise,video_type="reddit",filename=title)
+            video.download_video()
 
 if __name__=='__main__':
     main()
