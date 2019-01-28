@@ -1,0 +1,17 @@
+{
+    "exercises": {
+        "benchpress":["benchpress","bench"],
+        "pullup":["pullup","pullups"], 
+        "pushup":["pushup","pushups"], 
+        "squat":["squat","squats"], 
+        "deadlift":["deadlift","dl"],
+        "overheadsquat":["overheadsquat","overhead squat","ohs"]
+    }, 
+    "stop_words": [
+        "sumo",
+        "sumodeadlift", 
+        "?", 
+        "advice", 
+        "crossfit"
+    ]
+}

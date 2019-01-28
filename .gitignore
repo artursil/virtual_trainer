@@ -4,6 +4,7 @@ connector/
 testing.py
 .vscode/
 metadata.csv
+instagram_testing.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
