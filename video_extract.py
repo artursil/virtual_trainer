@@ -1,5 +1,5 @@
-from utils import *
 import youtube_dl
+from utils import *
 
 class VideoScraper:
     def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
@@ -78,6 +78,12 @@ class VideoScraper:
         else:
             raise FileNotFoundError
 
+    def __duration_other(self):
+        if os.path.isfile(self.filepath):
+            return VideoFileClip(self.filepath).duration
+        else:
+            raise FileNotFoundError      
+
     def clip_path(self):
         return self.filepath.replace('/videos/','/videos/clipped/')
 
@@ -137,7 +143,10 @@ class VideoScraper:
 
     @property
     def duration(self):
-        return self.video.duration
+        if self.video_type=="youtube":
+            return self.video.duration
+        else:
+            return self.__duration_other
 
     @property
     def streams(self):

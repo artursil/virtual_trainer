@@ -1,17 +1,29 @@
 import os
-import pafy
 import cv2
-from moviepy.editor import *
-from slugify import slugify
+import pafy
 import youtube_dl
 import re
 import json
+import pandas as pd
+from moviepy.editor import *
+from slugify import slugify
+
 from itertools import chain
 from langdetect import detect
 
-def get_stop_words(path,exercise):
-    with open(f'{path}/stop_words.json', encoding="utf8") as json_file:
+
+def get_config_file(path):
+    path=path.replace("/txt_files","")
+    with open(f'{path}/config_file.json', encoding="utf8") as json_file:
         _data = json.load(json_file)
+    return _data   
+
+def get_stop_words(path,exercise):
+    # TODO After testing delete stop_words
+    # with open(f'{path}/stop_words.json', encoding="utf8") as json_file:
+    #     _data = json.load(json_file)
+    _data = get_config_file(path)
+    _data = _data[exercise]
     exercises_d = _data['exercises']
     exercises = list(chain(*[v for k,v in exercises_d.items() if k!=exercise]))
     stop_words = _data['stop_words']
@@ -98,5 +110,3 @@ def get_weight(text):
 
 def get_lbs(kg):
     return kg*2.2046
-
-
