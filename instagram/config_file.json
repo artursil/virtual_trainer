@@ -1,0 +1,67 @@
+{
+    "deadlift":{
+                "max_kg":200,
+                "exercises": {
+                    "benchpress":["benchpress","bench"],
+                    "pullup":["pullup","pullups"], 
+                    "pushup":["pushup","pushups"], 
+                    "squat":["squat","squats"], 
+                    "deadlift":["deadlift","dl"],
+                    "overheadsquat":["overheadsquat","overhead squat","ohs"],
+                    "shoulderpress":["shoulder","shoulderpress"]
+                }, 
+                "stop_words": [
+                    "sumo",
+                    "sumodeadlift", 
+                    "?", 
+                    "advice", 
+                    "crossfit",
+                    "form",
+                    "press",
+                    "bulgarian",
+                    "bulgarianbag",
+                    "diary",
+                    "arms",
+                    "fitspo",
+                    "dumbass"
+                    
+                ],
+                "ids_to_exclude":[
+                    1965177842278965758,
+                    1965644898044675491
+
+                ]
+            },
+    "squat":{
+                "max_kg":150,
+                "exercises": {
+                    "benchpress":["benchpress","bench"],
+                    "pullup":["pullup","pullups"], 
+                    "pushup":["pushup","pushups"], 
+                    "squat":["squat","squats"], 
+                    "deadlift":["deadlift","dl"],
+                    "overheadsquat":["overheadsquat","overhead squat","ohs"],
+                    "shoulderpress":["shoulder","shoulderpress"]
+                }, 
+                "stop_words": [
+                    "sumo",
+                    "sumodeadlift", 
+                    "?", 
+                    "advice", 
+                    "crossfit",
+                    "form",
+                    "press",
+                    "bulgarian",
+                    "bulgarianbag",
+                    "diary",
+                    "arms",
+                    "fitspo",
+                    "dumbass"
+                    
+                ],
+                "ids_to_exclude":[
+                    
+
+                ]
+            }
+}

@@ -2,13 +2,15 @@ from instagram_scraper.app import InstagramScraper
 import argparse
 from connector.instagramconsetup import *
 from itertools import chain
+import re
+from utils import *
 
 EXERCISE = "deadlift"
 
 # TODO - run this code without parser
 
 def create_metadata(path,exercise,max_n_posts):
-# args_dict = {'username':["deadlift"],
+# args_dict = {'username':[exercise],
 #             'tag':True,
 #             'login_user':USERNAME,
 #             'login_pass':PASSWORD,
@@ -19,7 +21,7 @@ def create_metadata(path,exercise,max_n_posts):
 #             'latest_stamps':None
 #             }
 
-    args_dict = {'--username':"deadlift",
+    args_dict = {'--username':exercise,
                 '--tag':True,
                 '--login-user':USERNAME,
                 '--login-pass':PASSWORD,
