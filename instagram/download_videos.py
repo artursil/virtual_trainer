@@ -44,6 +44,6 @@ def download_videos(df,path):
                 duration = video.duration
                 down_data_df = append_df(down_data_df,vid,video.filename,video.filepath,title,\
                                         duration,row['reps'],exercise,text)
-    down_data_df.to_csv(f"{base_path}/txt_files/downloaded_files.csv",index=False)
+    down_data_df.to_csv(f"{base_path}/txt_files/{exercise}_dl_files.csv",index=False)
 
 
