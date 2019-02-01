@@ -13,8 +13,8 @@ from langdetect import detect
 
 
 def get_config_file(path):
-    path=path.replace("/txt_files","")
-    with open(f'{path}/config_file.json', encoding="utf8") as json_file:
+    _path=path.replace("/txt_files","")
+    with open(f'{_path}/config_file.json', encoding="utf8") as json_file:
         _data = json.load(json_file)
     return _data   
 
@@ -110,3 +110,24 @@ def get_weight(text):
 
 def get_lbs(kg):
     return kg*2.2046
+
+def check_max_weight(weight,mu,max_kg):
+    max_lbs = get_lbs(max_kg)
+    weight_g = False
+    if weight!=None:
+        if mu=="kg":
+            if weight<max_kg:
+                weight_g = True
+        else:
+            if weight<max_lbs:
+                weight_g=True
+    return weight_g
+
+def create_metadata_df(path,filename):
+    if os.path.isfile(f"{path}/{filename}"):
+        metadata_df = pd.read_csv(f"{path}/{filename}")
+    else:
+        metadata_df = pd.DataFrame()
+    return metadata_df
+
+
