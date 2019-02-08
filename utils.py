@@ -1,17 +1,29 @@
 import os
-import pafy
 import cv2
-from moviepy.editor import *
-from slugify import slugify
+import pafy
 import youtube_dl
 import re
 import json
+import pandas as pd
+from moviepy.editor import *
+from slugify import slugify
+
 from itertools import chain
 from langdetect import detect
 
-def get_stop_words(path,exercise):
-    with open(f'{path}/stop_words.json', encoding="utf8") as json_file:
+
+def get_config_file(path):
+    _path=path.replace("/txt_files","")
+    with open(f'{_path}/config_file.json', encoding="utf8") as json_file:
         _data = json.load(json_file)
+    return _data   
+
+def get_stop_words(path,exercise):
+    # TODO After testing delete stop_words
+    # with open(f'{path}/stop_words.json', encoding="utf8") as json_file:
+    #     _data = json.load(json_file)
+    _data = get_config_file(path)
+    _data = _data[exercise]
     exercises_d = _data['exercises']
     exercises = list(chain(*[v for k,v in exercises_d.items() if k!=exercise]))
     stop_words = _data['stop_words']
@@ -98,5 +110,24 @@ def get_weight(text):
 
 def get_lbs(kg):
     return kg*2.2046
+
+def check_max_weight(weight,mu,max_kg):
+    max_lbs = get_lbs(max_kg)
+    weight_g = False
+    if weight!=None:
+        if mu=="kg":
+            if weight<max_kg:
+                weight_g = True
+        else:
+            if weight<max_lbs:
+                weight_g=True
+    return weight_g
+
+def create_metadata_df(path,filename):
+    if os.path.isfile(f"{path}/{filename}"):
+        metadata_df = pd.read_csv(f"{path}/{filename}")
+    else:
+        metadata_df = pd.DataFrame()
+    return metadata_df
 
 

@@ -5,13 +5,23 @@
         "pushup":["pushup","pushups"], 
         "squat":["squat","squats"], 
         "deadlift":["deadlift","dl"],
-        "overheadsquat":["overheadsquat","overhead squat","ohs"]
+        "overheadsquat":["overheadsquat","overhead squat","ohs"],
+        "shoulderpress":["shoulder","shoulderpress"]
     }, 
     "stop_words": [
         "sumo",
         "sumodeadlift", 
         "?", 
         "advice", 
-        "crossfit"
+        "crossfit",
+        "form",
+        "press",
+        "bulgarian",
+        "bulgarianbag",
+        "diary",
+        "arms",
+        "fitspo",
+        "dumbass"
+        
     ]
 }

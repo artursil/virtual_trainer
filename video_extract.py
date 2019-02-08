@@ -1,5 +1,7 @@
-from utils import *
 import youtube_dl
+import time
+import cv2
+from utils import *
 
 class VideoScraper:
     def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
@@ -20,8 +22,10 @@ class VideoScraper:
                 self.filename = self.generate_filename()
         else:
             self.filename = kwargs.get("filename")
-        
-        self.filepath = self.generate_filepath()
+        if kwargs.get("filepath") is None:
+            self.filepath = self.generate_filepath()
+        else:
+            self.filepath = kwargs.get("filepath")
         self.clipped_path = self.clip_path()
 
     def download_video(self,quiet=True):
@@ -73,22 +77,38 @@ class VideoScraper:
         return url
 
     def clip_video(self,start_t,end_t):
-        if os.path.isfile(self.filepath):
-            return VideoFileClip(self.filepath).subclip(start_t,end_t)
+        if os.path.isfile(f"{self.filepath}.mp4"):
+            return VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
         else:
-            raise FileNotFoundError
+            raise FileNotFoundError(f"{self.filepath}")
+
+    def __duration_other(self):
+        file_with_ext = f"{self.filepath}.mp4"
+        if os.path.isfile(file_with_ext):
+            vid = VideoFileClip(file_with_ext)
+            duration = vid.duration
+            vid.close()
+            # try:
+            #     r =  VideoFileClip(file_with_ext).duration
+            # except:
+            #     print(file_with_ext)
+            #     r =  VideoFileClip(file_with_ext).duration
+            return duration
+        else:
+            raise FileNotFoundError      
 
     def clip_path(self):
         return self.filepath.replace('/videos/','/videos/clipped/')
 
-    def save_clipped(self,start_t,end_t):
+    def save_clipped(self,start_t,end_t,n_clip):
         my_clip = self.clip_video(start_t,end_t)
         if os.path.isdir("/".join(self.clipped_path.split("/")[:-1]))==False:
             os.makedirs("/".join(self.clipped_path.split("/")[:-1]))
         if os.path.isfile(self.clipped_path):
             print("Clipped version of this file exists")
         else:
-            my_clip.write_videofile(self.clipped_path)
+            my_clip.write_videofile(f"{self.clipped_path}_{n_clip}.mp4")
+            my_clip.close()
 
     def generate_filepath(self):
         return f'{self.base_path}videos/{self.exercise}/{self.filename}'
@@ -130,6 +150,29 @@ class VideoScraper:
             os.makedirs(images_path) 
         video.write_images_sequence(f'{images_path}img%03d.png')
 
+    @classmethod
+    def from_file(cls,file_path,exercise):
+        filepath = filepath.replace(".mp4","")
+        filename = filepath.split("/")[1].replace(".mp4","")
+        return cls(url="",base_path="",exercise=exercise,quality="mp4",
+                    video_type="other",filepath=filepath,filename=filename)
+
+    def get_images(self,fps=30):
+        vidcap = cv2.VideoCapture(f"{self.filepath}.{self.quality}")
+        success,image = vidcap.read()
+        x=0
+        n_imgs = int(60*self.duration)
+        images = np.zeros([n_imgs,*image.shape])
+        while success:
+            # print(x)
+            success,image = vidcap.read()
+            images[x] = image
+            x+=1
+        images = images[:x-1,:,:,:]
+        if x/duration-fps>2:
+            images = images[::2,:,:,:]
+        return images
+
 
     @property
     def title(self):
@@ -137,7 +180,10 @@ class VideoScraper:
 
     @property
     def duration(self):
-        return self.video.duration
+        if self.video_type=="youtube":
+            return self.video.duration
+        else:
+            return self.__duration_other()
 
     @property
     def streams(self):
