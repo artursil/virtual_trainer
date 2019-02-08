@@ -96,6 +96,7 @@ class ExerciseScraper():
                 filename = f"{ix}_{slugify(text)[:50]}"
                 if good_weight:
                     insta_dict = {'id':vid,
+                                'shortcode':'shortcode',
                                 'text':text,
                                 'tags':str(tags),
                                 'video_url':row['urls'][0],
@@ -123,7 +124,7 @@ class ExerciseScraper():
             if bool(insta_dict):
                 ix+=1
                 insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
-        insta_df.drop_duplicates("video_url",inplace=True)
+        insta_df.drop_duplicates("shortcode",inplace=True)
         insta_df.to_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df.csv",index=False)     
         return insta_df
     
@@ -170,12 +171,13 @@ class ExerciseScraper():
         print(sum(df["not_in_files"]))
         df["too_long"] = df['duration']>=50
         df["t_per_rep"] = df['duration']/df['n_reps']
+        df["t_short_rep"] = df["t_per_rep"]<=0.6
         df["reps_t_long"] = df["t_per_rep"]>=50
         df["t_many_reps"] = df['n_reps']>self.max_reps
-        zipped = zip(df["too_long"],df["reps_t_long"],df["t_many_reps"],df["not_in_files"])
+        zipped = zip(df["too_long"],df["reps_t_long"],df["t_short_rep"],df["t_many_reps"],df["not_in_files"])
         df["cond1"] = [any(z) and ~nif for *z,nif in zipped]
         df["cond1"] = df["cond1"]==-1
-        zipped = zip(df["too_long"],df["reps_t_long"],df["t_many_reps"],df["not_in_files"])
+        zipped = zip(df["too_long"],df["reps_t_long"],df["t_short_rep"],df["t_many_reps"],df["not_in_files"])
         df["cond2"] = [any(z) for z in zipped]
         return df
 
@@ -202,6 +204,10 @@ class ExerciseScraper():
         
         
         """
+        print("Waiting for user to delete videos")
+        cleaning_done = input("Are you ready to continue [y/n]")
+        if cleaning_done.upper()=="N":
+            return
 
         down_df = pd.read_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv")
         print(f"Number of videos before filtering: {len(down_df)}")

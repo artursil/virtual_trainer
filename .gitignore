@@ -10,6 +10,7 @@ instagram_testing.py
 instagram_testing2.py
 data.json
 instagram/stop_words.json
+.tags
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
