@@ -1,7 +1,10 @@
 import youtube_dl
 import time
 import cv2
+import numpy as np
+from PIL import Image
 from utils import *
+from openpose.preprocessing import rtpose_preprocess, vgg_preprocess
 
 class VideoScraper:
     def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
@@ -152,26 +155,42 @@ class VideoScraper:
 
     @classmethod
     def from_file(cls,file_path,exercise):
-        filepath = filepath.replace(".mp4","")
+        filepath = file_path.replace(".mp4","")
         filename = filepath.split("/")[1].replace(".mp4","")
         return cls(url="",base_path="",exercise=exercise,quality="mp4",
                     video_type="other",filepath=filepath,filename=filename)
 
-    def get_images(self,fps=30):
+    def get_images(self,fps=30,transform=None,vgg=True):
         vidcap = cv2.VideoCapture(f"{self.filepath}.{self.quality}")
         success,image = vidcap.read()
         x=0
         n_imgs = int(60*self.duration)
-        images = np.zeros([n_imgs,*image.shape])
-        while success:
-            # print(x)
-            success,image = vidcap.read()
-            images[x] = image
+        # images = np.zeros([n_imgs,*image.shape])
+        if vgg==True:
+            preprocess = vgg_preprocess
+        else:
+            preprocess = rtpose_preprocess
+        orig_images = []
+        prep_imgs= []
+        while success:    
+            if transform is None:
+                image = preprocess(image)
+                orig_image = image
+            else:
+                image = np.array(transform(Image.fromarray(image)))
+                orig_image = image
+                image = preprocess(image)
+            orig_images.append(orig_image)
+            prep_imgs.append(image)
             x+=1
-        images = images[:x-1,:,:,:]
-        if x/duration-fps>2:
-            images = images[::2,:,:,:]
-        return images
+            success,image = vidcap.read()
+        orig_images = np.array(orig_images)
+        prep_imgs = np.array(prep_imgs)
+        # images = images[:x-1,:,:,:]
+        if x/self.duration-fps>2:
+            orig_images = orig_images[::2,:,:,:]
+            prep_imgs = prep_imgs[::2,:,:,:]
+        return prep_imgs, orig_images
 
 
     @property

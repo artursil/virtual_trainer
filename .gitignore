@@ -11,7 +11,10 @@ instagram_testing2.py
 data.json
 instagram/stop_words.json
 .tags
-
+openpose/weights/
+main.py
+*.png
+*kopia*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

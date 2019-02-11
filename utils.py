@@ -5,6 +5,7 @@ import youtube_dl
 import re
 import json
 import pandas as pd
+import numpy as np
 from moviepy.editor import *
 from slugify import slugify
 
