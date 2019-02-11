@@ -69,6 +69,7 @@ class ExerciseScraper():
         return exercises, stop_words
 
     def __filter_row(self,row,ix,stop_words,other_exercises,maximum_tags):
+        config_json = self.__read_config()
         insta_dict = {}
         is_video = row['is_video'] 
         if is_video==False:
@@ -86,7 +87,7 @@ class ExerciseScraper():
         len_tags_g = 0<len(tags)<maximum_tags
         tags_good = sum([tag in stop_words+other_exercises for tag in tags])==0
         crawl = lang=="en" and text!="" and len_urls==1 and text_good and tags_good and len_tags_g           
-        if crawl:
+        if crawl and row['shortcode'] not in config_json[self.exercise]['shortcodes_to_exclude']:
             m = search_reg(text)
             if m:
                 reps_n,weight,mu = get_reps(m,text)
@@ -96,7 +97,7 @@ class ExerciseScraper():
                 filename = f"{ix}_{slugify(text)[:50]}"
                 if good_weight:
                     insta_dict = {'id':vid,
-                                'shortcode':'shortcode',
+                                'shortcode':row['shortcode'],
                                 'text':text,
                                 'tags':str(tags),
                                 'video_url':row['urls'][0],
@@ -110,15 +111,18 @@ class ExerciseScraper():
         return insta_dict
 
 
-    def fitler_posts(self,max_tags=15):
+    def fitler_posts(self,append,max_tags=15,):
         data = self.__merge_metadata()
         max_kg = self.max_kg
         other_exercises, stop_words = get_stop_words(f"{self.path}",self.exercise)
         maximum_tags = max_tags
-        insta_df = pd.DataFrame()
+        if append==True:
+            insta_df=pd.read_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df.csv")
+        else:
+            insta_df = pd.DataFrame()
         ix=0
         for idx,d in enumerate(data):
-            if idx%1000==0:
+            if idx%10000==0:
                 print(idx)
             insta_dict = self.__filter_row(d,ix,stop_words,other_exercises,maximum_tags)
             if bool(insta_dict):
@@ -129,13 +133,14 @@ class ExerciseScraper():
         return insta_df
     
     @staticmethod
-    def append_df(df,vid,filename,filepath,title,duration,n_reps,exercise,text):
+    def append_df(df,vid,filename,filepath,title,duration,n_reps,shortcode,exercise,text):
         meta_dict={ 'vid':vid, #added for isntagram maybe also useful for reddit
                     'filename':filename,
                     'filepath':filepath,
                     'title':title,
                     'duration':duration,
                     'n_reps':n_reps,
+                    'shortcode':shortcode,
                     'exercise':exercise,
                     "full_text":text # added
                     }
@@ -144,9 +149,13 @@ class ExerciseScraper():
     def __read_download_files(self):
         return pd.read_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df.csv")
 
-    def download_videos(self):
+    def download_videos(self,append):
+        self.__delete_duplicates()
         df = self.__read_download_files()
-        down_data_df = pd.DataFrame()
+        if append==True:
+            down_data_df = pd.read_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv")
+        else:
+            down_data_df = pd.DataFrame()     
         for ix,row in df.iterrows():
             if ix % 10==0:
                 print(ix) 
@@ -155,14 +164,77 @@ class ExerciseScraper():
             text = slugify(row["text"]).replace("-"," ")
             title = slugify(row['text'])[:50]
             filename = row['filename']
+            shortcode = row['shortcode']
+            if f"{title}.mp4" in self.self.downloaded_files_df["files2"]:
+                print(f"{title} already downloaded")
+                continue
             video = VideoScraper(url,self.path,self.exercise,video_type="other",filename=filename)
             if video.error==False:
                 success = video.download_video()
                 if success:
                     duration = video.duration
                     down_data_df = self.append_df(down_data_df,vid,video.filename,video.filepath,title,\
-                                            duration,row['reps'],self.exercise,text)
+                                            duration,row['reps'],shortcode,self.exercise,text)
         down_data_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
+
+    
+    def __delete_duplicates(self):
+        files_path = f"{self.path}/videos/{self.exercise}/"
+        files = os.listdir(files_path)
+        files = [x for x in files if x.find("mp4")>-1]
+        nrs = [int(x.split("_")[0]) for x in files]
+        files2 = [x.split("_")[1] for x in files]
+
+        df = pd.DataFrame({"files":files,"nrs":nrs,"files2":files2})
+
+        df.sort_values(["files2","nrs"],inplace=True)
+        df["shifted"] = df["files2"].shift()
+        df["to_delete"] = df["files2"]==df["shifted"]
+
+        to_del = df[df["to_delete"]==True]["files"].tolist()
+
+        for file in to_del:
+            os.remove(f"{files_path}{file}")
+            print(f"Deleting {file}")
+        self.downloaded_files_df = df[df["to_delete"]==False]
+        return self
+
+    def __delete_additional_videos(self,down_data_df):
+        files_path = f"{self.path}/videos/{self.exercise}/"
+        files = os.listdir(files_path)
+        files = [x for x in files if x.find("mp4")>-1]
+    
+        for file in files:
+            if file.replace("mp4","") in down_data_df["filename"].tolist():
+                os.remove(f"{files_path}{file}")
+                print(f"Deleting {file}")
+        return self
+
+    def update_downloaded_files(self,append):
+        self.__delete_duplicates()
+        df = self.__read_download_files()
+        if append==True:
+            down_data_df = pd.read_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv")
+        else:
+            down_data_df = pd.DataFrame() 
+        for ix,row in df.iterrows():
+            if ix % 10==0:
+                print(ix) 
+            vid = row['id']
+            url = row['video_url']
+            text = slugify(row["text"]).replace("-"," ")
+            title = slugify(row['text'])[:50]
+            filename = row['filename']
+            shortcode = row['shortcode']
+            if f"{title}.mp4" in self.downloaded_files_df["files2"].tolist():
+                title_wn = str(self.downloaded_files_df[self.downloaded_files_df["files2"]==f"{title}.mp4"]["files"].iloc[0])
+                video = VideoScraper.from_file(f"{self.path}/videos/{self.exercise}/{title_wn}.mp4",self.exercise)
+                if video.error==False:
+                    down_data_df = self.append_df(down_data_df,vid,video.filename,video.filepath,title,\
+                                                video.duration,row['reps'],shortcode,self.exercise,text)
+        down_data_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
+        self.__delete_additional_videos(down_data_df)
+
 
     def __filter_downloaded(self,df):
         files = os.listdir(f"{self.path}/videos/{self.exercise}/")
@@ -196,7 +268,8 @@ class ExerciseScraper():
         df_trun = df.loc[df["cond2"]]
         ind_to_drop = list(df_trun.index)
         vids_to_exclude = list(df_trun["vid"].values)
-        return ind_to_drop, vids_to_exclude
+        sc_to_exclude = list(df_trun["shortcode"].values)
+        return ind_to_drop, vids_to_exclude, sc_to_exclude
 
     def update_filtered(self):
         """[This method compares list of videos in downloaded_files.csv to a list of physical videos.
@@ -214,17 +287,20 @@ class ExerciseScraper():
         down_df = down_df.reset_index(drop=True)
         config_json = self.__read_config()
         vids_to_exclude = config_json[self.exercise]["ids_to_exclude"]
+        sc_to_exclude = config_json[self.exercise]["shortcodes_to_exclude"]
         ind_to_drop = []
 
         f_down_df = self.__filter_downloaded(down_df)
         print("removing")
         self.__remove_vids(f_down_df)
-        i2d, vid2exc = self.__get_vids_to_drop(f_down_df)
+        i2d, vid2exc, sc2exc = self.__get_vids_to_drop(f_down_df)
         ind_to_drop += i2d
-        print(vids_to_exclude)
-        print("vid2exc")
-        print(vid2exc)
+        # print(vids_to_exclude)
+        # print("vid2exc")
+        # print(vid2exc)
         vids_to_exclude += vid2exc
+        sc_to_exclude += sc2exc
+        # print(sc_to_exclude)
                 
         config_json[self.exercise]["ids_to_exclude"] = list(set(vids_to_exclude))
         down_df = f_down_df.drop(["cond1","cond2","not_in_files","too_long","reps_t_long","t_many_reps"],axis=1)
@@ -232,7 +308,8 @@ class ExerciseScraper():
         print(f"Number of videos after filtering: {len(down_df)}")
         down_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
         config_json[self.exercise]["ids_to_exclude"] = list(set([int(vid) for vid in vids_to_exclude]))
-        print(config_json)
+        config_json[self.exercise]["shortcodes_to_exclude"] = list(set([str(sc) for sc in sc_to_exclude]))
+        # print(config_json)
         self.__save_config(config_json)
 
     @staticmethod
@@ -265,5 +342,11 @@ class ExerciseScraper():
         videos = self.__cr_clipped_intervals() 
         for _,row in videos.iterrows():
             video = VideoScraper("",self.path,self.exercise,video_type="other",filename=row['filename'])
+            num_clips = len(row["clips"])
             for ix,clip in enumerate(row["clips"]):
-                video.save_clipped(clip[0],clip[1],ix)
+                if num_clips<=5 and ix>=1:
+                    video.save_clipped(clip[0],clip[1],ix)
+                elif num_clips>5 and ix>=1 and ix!=num_clips:
+                    video.save_clipped(clip[0],clip[1],ix)
+
+

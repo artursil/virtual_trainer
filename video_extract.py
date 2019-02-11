@@ -87,7 +87,7 @@ class VideoScraper:
 
     def __duration_other(self):
         file_with_ext = f"{self.filepath}.mp4"
-        if os.path.isfile(file_with_ext):
+        if os.path.isfile(file_with_ext):          
             vid = VideoFileClip(file_with_ext)
             duration = vid.duration
             vid.close()
@@ -98,7 +98,7 @@ class VideoScraper:
             #     r =  VideoFileClip(file_with_ext).duration
             return duration
         else:
-            raise FileNotFoundError      
+            raise FileNotFoundError(f"{file_with_ext}")     
 
     def clip_path(self):
         return self.filepath.replace('/videos/','/videos/clipped/')
@@ -152,11 +152,12 @@ class VideoScraper:
         if os.path.isdir(images_path)==False:
             os.makedirs(images_path) 
         video.write_images_sequence(f'{images_path}img%03d.png')
+        video.close()
 
     @classmethod
     def from_file(cls,file_path,exercise):
         filepath = file_path.replace(".mp4","")
-        filename = filepath.split("/")[1].replace(".mp4","")
+        filename = filepath.split("/")[-1].replace(".mp4","")
         return cls(url="",base_path="",exercise=exercise,quality="mp4",
                     video_type="other",filepath=filepath,filename=filename)
 
