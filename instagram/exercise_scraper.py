@@ -304,6 +304,7 @@ class ExerciseScraper():
                 
         config_json[self.exercise]["ids_to_exclude"] = list(set(vids_to_exclude))
         down_df = f_down_df.drop(["cond1","cond2","not_in_files","too_long","reps_t_long","t_many_reps"],axis=1)
+        self.__delete_clipped(down_df,ind_to_drop)
         down_df.drop(ind_to_drop,axis=0,inplace=True)
         print(f"Number of videos after filtering: {len(down_df)}")
         down_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
@@ -311,6 +312,15 @@ class ExerciseScraper():
         config_json[self.exercise]["shortcodes_to_exclude"] = list(set([str(sc) for sc in sc_to_exclude]))
         # print(config_json)
         self.__save_config(config_json)
+
+    def __delete_clipped(self,down_df,ind_to_drop):
+        clipped_files = os.listdir(f"{self.path}videos/clipped/{self.exercise}/")
+        clipped_files = [x for x in clipped_files if x.find("mp4")>-1]
+        df_delete = [x.split("_")[1] for x in down_df.loc[ind_to_drop,"filename"].tolist()]
+        for clip in clipped_files:
+            if clip.split("_")[1] in df_delete:
+                os.remove(f"{self.path}videos/clipped/{self.exercise}/{clip}")
+                print(f"Deleting {clip}")
 
     @staticmethod
     def clipped_list(dur,dur2,n_reps,tpr):
