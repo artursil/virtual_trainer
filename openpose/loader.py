@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from video_extract import VideoScraper
+import torchvision.transforms as transforms
 
 EXC_DICT = {
             0:'squat',
@@ -16,12 +17,13 @@ class VideosDataset(Dataset):
     def __len__(self):
         return len(self.metadata_df)
 
-    def __init__(self, path, exc_dict,
+    def __init__(self, path, exc_dict,resize=220,
                  transform=None):
         
         self.path = path
         self.transform = transform
         self.exc_dict = exc_dict
+        self.resize = resize
         self.metadata_df = self.__get_metadata()
 
 
@@ -48,10 +50,11 @@ class VideosDataset(Dataset):
         exercise = self.metadata_df.iloc[index]["exercise"]
         target = self.metadata_df.iloc[index]["target"]
         video = VideoScraper.from_file(filepath,exercise)
+        resize = transforms.Resize(self.resize)
         if self.transform is None:
-            prep_imgs, orig_images = video.get_images(fps=30,vgg=False)
+            prep_imgs, orig_images = video.get_images(resize=resize,fps=30 ,vgg=False)
         else:
-            prep_imgs, orig_images = video.get_images(fps=30,transform=self.transform)
+            prep_imgs, orig_images = video.get_images(resize=resize,fps=30 ,transform=self.transform)
         target_arr = np.array([target]*prep_imgs.shape[0])
         return prep_imgs, orig_images, target_arr
 

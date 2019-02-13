@@ -12,7 +12,6 @@ data.json
 instagram/stop_words.json
 .tags
 openpose/weights/
-main.py
 *.png
 *kopia*
 ctags.exe

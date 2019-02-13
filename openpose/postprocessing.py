@@ -94,10 +94,9 @@ def getValidPairs(output,detected_keypoints,frameWidth, frameHeight):
             # Append the detected connections to the global list
             valid_pairs.append(valid_pair)
         else: # If no keypoints are detected
-            print("No Connection : k = {}".format(k))
+            # print("No Connection : k = {}".format(k))
             invalid_pairs.append(k)
             valid_pairs.append([])
-    print(valid_pairs)
     return valid_pairs, invalid_pairs
     
 def number_of_people(detected_keypoints):
@@ -156,11 +155,33 @@ def getPersonwiseKeypoints(valid_pairs, invalid_pairs,keypoints_list):
     return personwiseKeypoints
 
 
+def more_keypoints(personwiseKeypoints,kp_threshold):
+    n_plp = len(personwiseKeypoints)
+    num_kp=np.empty(shape=(n_plp))
+    sum_big = []
+    for n in range(n_plp):
+        kp_sum = sum(personwiseKeypoints[n]==-1)
+        num_kp[n] = kp_sum
+    inds = np.nonzero(num_kp>=kp_threshold)[0]
+    if inds.shape[0]==0:
+        return personwiseKeypoints[np.argmax(num_kp)]
+    else:
+        return personwiseKeypoints[list(inds)]
+
+
 def bigger_person(personwiseKeypoints,keypoints_list,frameWidth, frameHeight):
     n_plp = len(personwiseKeypoints) 
     norms= [0]*n_plp
     for i in range(14):
-                
+        skip=False
+        n_skip=0
+        for n in range(n_plp):
+            index = personwiseKeypoints[n][np.array(POSE_PAIRS[i])]
+            if -1 in index:
+                skip=True
+                n_skip+=1
+        if skip==True or n_skip>8:
+            continue        
         for n in range(n_plp):
             index = personwiseKeypoints[n][np.array(POSE_PAIRS[i])]
             if -1 in index:
@@ -210,3 +231,66 @@ def save_picture(path,personwiseKeypoints,keypoints_list,frameClone):
             A = np.int32(keypoints_list[index.astype(int), 1])
             cv2.line(frameClone, (B[0], A[0]), (B[1], A[1]), COLORS[i], 3, cv2.LINE_AA)        
     cv2.imwrite(path,frameClone)
+
+
+def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,desc="inter"):
+    POSE_PAIRS = [[0,1], [1,2], [2,3], [3,4], [1,5], [5,6], [6,7], [1,14], [14,8], [8,9], [9,10], [14,11], [11,12], [12,13] ]
+    columns = ['0_0', '0_1', '1_0',
+           '1_1', '2_0', '2_1', '3_0', '3_1', '4_0', '4_1', '5_0', '5_1', '6_0',
+           '6_1', '7_0', '7_1', '8_0', '8_1', '9_0', '9_1', '10_0', '10_1', '11_0',
+           '11_1', '12_0', '12_1', '13_0', '13_1', '14_0', '14_1','15_0', '15_1','16_0', '16_1']
+    df = outputs_df.copy()
+    df = df[df["vid_nr"]==ix]
+    try:
+        for point in range(16):
+            pointsA = (int(df.iloc[frame_c].loc[columns[point*2]]),int(df.iloc[frame_c].loc[columns[point*2+1]]))
+        
+            if pointsA:
+                cv2.circle(frame, pointsA, 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+    
+    
+        cv2.imwrite(f"{PATH.replace('clipped','processed')}/test{ix}_{frame_c}_{desc}.png",frame)
+    except ValueError:
+        pass
+
+
+def interpolate(df):
+    columns = ['0_0', '0_1', '1_0',
+           '1_1', '2_0', '2_1', '3_0', '3_1', '4_0', '4_1', '5_0', '5_1', '6_0',
+           '6_1', '7_0', '7_1', '8_0', '8_1', '9_0', '9_1', '10_0', '10_1', '11_0',
+           '11_1', '12_0', '12_1', '13_0', '13_1', '14_0', '14_1']
+    
+    for c in range(len(columns)//2):
+        col= columns[c*2]
+        col2 = columns[c*2+1]
+        avg = np.mean(df[col])
+        std = np.std(df[col])
+        df.loc[np.abs(df[col] -avg) > 2*std,[col,col2]] = np.nan
+        
+        # feet shouldnt be moving that's why they are treated differently 
+        # -> interval with biggest amount of obs -> values that are in this interval 
+        # -> mean of those values -> replace all the values with new one
+        if c in [10,13]:
+            x_cord = str(c) + "_0"
+            y_cord = str(c) + "_1"
+            new_x = int(np.mean(df.loc[[clip in df[x_cord].value_counts(bins=3).iloc[[0]].index[0]
+                         for clip in df[x_cord]],x_cord]))
+
+            new_y = int(np.mean(df.loc[[clip in df[y_cord].value_counts(bins=3).iloc[[0]].index[0]
+                         for clip in df[y_cord]],y_cord]))
+
+            df[x_cord] = new_x
+            df[y_cord] = new_y
+
+        
+    df.loc[df["num_keypoints"]<=10,columns]= np.nan
+    df.interpolate(inplace=True)
+
+    # additional keypoint between neck and head (15_0,15_1)
+    df["15_0"] = np.floor(df[["0_0","1_0"]].min(axis=1) + np.abs(df["0_0"]-df["1_0"])/2)
+    df["15_1"] = np.floor(df[["0_1","1_1"]].min(axis=1) + np.abs(df["0_1"]-df["1_1"])/2)
+    # additional keypoint between left hip and right hip
+    df["16_0"] = np.floor(df[["10_0","13_0"]].min(axis=1) + np.abs(df["10_0"]-df["13_0"])/2)
+    df["16_1"] = np.floor(df[["10_1","13_1"]].min(axis=1) + np.abs(df["10_1"]-df["13_1"])/2)
+
+    return df

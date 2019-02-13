@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from utils import *
-from openpose.preprocessing import rtpose_preprocess, vgg_preprocess
+from openpose.preprocessing import rtpose_preprocess, vgg_preprocess, crop_with_factor
 
 class VideoScraper:
     def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
@@ -161,7 +161,7 @@ class VideoScraper:
         return cls(url="",base_path="",exercise=exercise,quality="mp4",
                     video_type="other",filepath=filepath,filename=filename)
 
-    def get_images(self,fps=30,transform=None,vgg=True):
+    def get_images(self,resize,fps=30,transform=None,vgg=True):
         vidcap = cv2.VideoCapture(f"{self.filepath}.{self.quality}")
         success,image = vidcap.read()
         x=0
@@ -173,14 +173,20 @@ class VideoScraper:
             preprocess = rtpose_preprocess
         orig_images = []
         prep_imgs= []
-        while success:    
-            if transform is None:
+        while success: 
+            image = np.array(resize(Image.fromarray(image)))
+            image,_,_ = crop_with_factor(image) 
+            # print(type(image))
+            if transform is None:  
+                orig_image = image            
                 image = preprocess(image)
-                orig_image = image
+                
             else:
                 image = np.array(transform(Image.fromarray(image)))
                 orig_image = image
                 image = preprocess(image)
+            # print("cropping")
+             
             orig_images.append(orig_image)
             prep_imgs.append(image)
             x+=1
