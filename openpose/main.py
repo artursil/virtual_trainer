@@ -14,12 +14,12 @@ from openpose.postprocessing import *
 
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-PATH = "D:/Documents_D/data_science/win/virtual_trainer/instagram/videos/clipped"
+# PATH = "D:/Documents_D/data_science/win/virtual_trainer/instagram/videos/clipped"
 EPOCHS=1
 
 
 
-def main():
+def main(path):
     weight_name = './openpose/weights/openpose_mpii_best.pth.tar'
     model = get_model('vgg19')     
     model.load_state_dict(torch.load(weight_name)['state_dict'])
@@ -27,7 +27,7 @@ def main():
     model = model.cuda()
     model.float()
     
-    dataset = VideosDataset(PATH,EXC_DICT,200,transform=None)
+    dataset = VideosDataset(path,EXC_DICT,200,transform=None)
     X,orig_images,y = dataset[255]
     dl = DataLoader(dataset, batch_size=1,sampler=None)
 
@@ -36,8 +36,6 @@ def main():
     with torch.no_grad():
         model.eval()
         for ix,batch in enumerate(dl):
-            if ix==1:
-                break
             if ix%50==0:
                 print(f"Processed video no: {ix+1}")
             X,orig_images_full, y = batch
@@ -126,16 +124,16 @@ def main():
                     
                     
                     if frame_counter in rnd_images:
-                        save_picture(f"{PATH.replace('clipped','processed')}/test{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
+                        save_picture(f"{path.replace('clipped','processed')}/test{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
         
             clip_df = interpolate(clip_df)
             for f in rnd_images:
                 frame_clone = orig_images_full[f].detach().cpu().numpy()
-                draw_interpolated(PATH,ix,f,clip_df,frame_clone) 
+                draw_interpolated(path,ix,f,clip_df,frame_clone) 
 
             outputs_df = outputs_df.append(clip_df,ignore_index=True)
             if (ix+1) % 100==0:
-                outputs_df.to_csv(f"{PATH.replace('clipped','processed')}/outputs_df_{ix}.csv")
+                outputs_df.to_csv(f"{path.replace('clipped','processed')}/outputs_df_{ix}.csv")
             if ix%50==0:
                 print(f"Time: {time.time()-st}")
-    outputs_df.to_csv(f"{PATH.replace('clipped','processed')}/outputs_df.csv")
+    outputs_df.to_csv(f"{path.replace('clipped','processed')}/outputs_df.csv")
