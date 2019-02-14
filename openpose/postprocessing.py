@@ -164,13 +164,13 @@ def more_keypoints(personwiseKeypoints,kp_threshold):
         num_kp[n] = kp_sum
     inds = np.nonzero(num_kp>=kp_threshold)[0]
     if inds.shape[0]==0:
-        return personwiseKeypoints[np.argmax(num_kp)]
+        return personwiseKeypoints[[np.argmax(num_kp)]]
     else:
         return personwiseKeypoints[list(inds)]
 
 
 def bigger_person(personwiseKeypoints,keypoints_list,frameWidth, frameHeight):
-    n_plp = len(personwiseKeypoints) 
+    n_plp = len(personwiseKeypoints)
     norms= [0]*n_plp
     for i in range(14):
         skip=False
@@ -192,13 +192,27 @@ def bigger_person(personwiseKeypoints,keypoints_list,frameWidth, frameHeight):
     norms_sorted = list(reversed(np.argsort(norms)))
     to_delete = []
     for n in range(len(norms)-1):
-        if norms[norms_sorted[0]]>norms[norms_sorted[n+1]]*1.2:
+        if norms[norms_sorted[0]]>norms[norms_sorted[n+1]]*1.8:
             to_delete.append(norms_sorted[n+1])
     for d in reversed(sorted(to_delete)):
         del norms_sorted[d]
         
     personwiseKeypoints = personwiseKeypoints[norms_sorted,:]
     return personwiseKeypoints.reshape(-1,16) 
+
+
+def detect_spotters(personwiseKeypoints):
+    n_plp = len(personwiseKeypoints)
+    max_conf = 0 
+    for n in range(n_plp):
+        if personwiseKeypoints[n][-1]>max_conf:
+            max_conf = personwiseKeypoints[n][-1]
+    for n in range(n_plp):
+        if personwiseKeypoints[n][-1]!=max_conf:
+            if ((personwiseKeypoints[n][-1]-max_conf)/max_conf)<=0.2:
+                return True
+    return False        
+    
 
             
 def head_middle(personwiseKeypoints,keypoints_list,frameWidth, frameHeight):       
@@ -233,7 +247,7 @@ def save_picture(path,personwiseKeypoints,keypoints_list,frameClone):
     cv2.imwrite(path,frameClone)
 
 
-def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,desc="inter"):
+def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,filename,desc="inter"):
     POSE_PAIRS = [[0,1], [1,2], [2,3], [3,4], [1,5], [5,6], [6,7], [1,14], [14,8], [8,9], [9,10], [14,11], [11,12], [12,13] ]
     columns = ['0_0', '0_1', '1_0',
            '1_1', '2_0', '2_1', '3_0', '3_1', '4_0', '4_1', '5_0', '5_1', '6_0',
@@ -249,7 +263,7 @@ def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,desc="inter"):
                 cv2.circle(frame, pointsA, 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
     
     
-        cv2.imwrite(f"{PATH.replace('clipped','processed')}/test{ix}_{frame_c}_{desc}.png",frame)
+        cv2.imwrite(f"{PATH.replace('clipped','processed')}/{filename}_{ix}_{frame_c}_{desc}.png",frame)
     except ValueError:
         pass
 
@@ -273,14 +287,20 @@ def interpolate(df):
         if c in [10,13]:
             x_cord = str(c) + "_0"
             y_cord = str(c) + "_1"
-            new_x = int(np.mean(df.loc[[clip in df[x_cord].value_counts(bins=3).iloc[[0]].index[0]
-                         for clip in df[x_cord]],x_cord]))
+            df[x_cord+"_orig"] = df[x_cord]
+            df[y_cord+"_orig"] = df[y_cord]
+            try:
+                new_x = int(np.mean(df.loc[[clip in df[x_cord].value_counts(bins=3).iloc[[0]].index[0]
+                            for clip in df[x_cord]],x_cord]))
 
-            new_y = int(np.mean(df.loc[[clip in df[y_cord].value_counts(bins=3).iloc[[0]].index[0]
-                         for clip in df[y_cord]],y_cord]))
-
-            df[x_cord] = new_x
-            df[y_cord] = new_y
+                new_y = int(np.mean(df.loc[[clip in df[y_cord].value_counts(bins=3).iloc[[0]].index[0]
+                            for clip in df[y_cord]],y_cord]))
+            except ValueError:
+                df[x_cord] = np.nan
+                df[y_cord] = np.nan               
+            else:
+                df[x_cord] = new_x
+                df[y_cord] = new_y
 
         
     df.loc[df["num_keypoints"]<=10,columns]= np.nan

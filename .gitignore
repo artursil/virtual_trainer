@@ -15,6 +15,7 @@ openpose/weights/
 *.png
 *kopia*
 ctags.exe
+analytics/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

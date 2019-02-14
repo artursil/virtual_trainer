@@ -19,7 +19,7 @@ EPOCHS=1
 
 
 
-def main(path):
+def main(path,starting_point):
     weight_name = './openpose/weights/openpose_mpii_best.pth.tar'
     model = get_model('vgg19')     
     model.load_state_dict(torch.load(weight_name)['state_dict'])
@@ -27,8 +27,8 @@ def main(path):
     model = model.cuda()
     model.float()
     
-    dataset = VideosDataset(path,EXC_DICT,200,transform=None)
-    X,orig_images,y = dataset[255]
+    dataset = VideosDataset(path,EXC_DICT,200,transform=None,starting_point=starting_point)
+    # X,orig_images,y = dataset[255]
     dl = DataLoader(dataset, batch_size=1,sampler=None)
 
     outputs_df = pd.DataFrame()
@@ -36,9 +36,11 @@ def main(path):
     with torch.no_grad():
         model.eval()
         for ix,batch in enumerate(dl):
+            ix+=starting_point
             if ix%50==0:
                 print(f"Processed video no: {ix+1}")
-            X,orig_images_full, y = batch
+            X,orig_images_full, y, filename = batch
+            filename= filename[0]
 
             X_full = X.squeeze(0).to(DEVICE)
             y = y.to(DEVICE).detach().cpu().numpy()
@@ -94,6 +96,10 @@ def main(path):
                     valid_pairs, invalid_pairs = getValidPairs(np.expand_dims(output1[j].detach().cpu().numpy(),axis=0),detected_keypoints,frameWidth, frameHeight)
                     personwiseKeypoints = getPersonwiseKeypoints(valid_pairs, invalid_pairs,keypoints_list)
 
+                    spotter=False
+                    if len(personwiseKeypoints)>1:
+                        spotter = detect_spotters(personwiseKeypoints)
+
                     if len(personwiseKeypoints)>1:
                         personwiseKeypoints = more_keypoints(personwiseKeypoints,6)
 
@@ -118,18 +124,18 @@ def main(path):
                             final_keypoints[f"{k}_1"] = np.nan 
                         num_keypoints = 0
         
-                    df_dict =  {"vid_nr":ix, "clip_id":frame_counter, "target":y[0][j], "num_keypoints":num_keypoints}
+                    df_dict =  {"vid_nr":ix,"filename":filename, "clip_id":frame_counter, "target":y[0][frame_counter], "num_keypoints":num_keypoints,"spotter":spotter}
                     df_dict.update(final_keypoints)
                     clip_df = clip_df.append(pd.DataFrame(df_dict,index=[0]),ignore_index=True)
                     
                     
                     if frame_counter in rnd_images:
-                        save_picture(f"{path.replace('clipped','processed')}/test{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
+                        save_picture(f"{path.replace('clipped','processed')}/{filename}_{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
         
             clip_df = interpolate(clip_df)
             for f in rnd_images:
                 frame_clone = orig_images_full[f].detach().cpu().numpy()
-                draw_interpolated(path,ix,f,clip_df,frame_clone) 
+                draw_interpolated(path,ix,f,clip_df,frame_clone,filename) 
 
             outputs_df = outputs_df.append(clip_df,ignore_index=True)
             if (ix+1) % 100==0:

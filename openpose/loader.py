@@ -15,15 +15,16 @@ EXC_DICT = {
 class VideosDataset(Dataset):
 
     def __len__(self):
-        return len(self.metadata_df)
+        return len(self.metadata_df)-self.starting_point
 
     def __init__(self, path, exc_dict,resize=220,
-                 transform=None):
+                 transform=None,starting_point=0):
         
         self.path = path
         self.transform = transform
         self.exc_dict = exc_dict
         self.resize = resize
+        self.starting_point = starting_point
         self.metadata_df = self.__get_metadata()
 
 
@@ -59,7 +60,8 @@ class VideosDataset(Dataset):
         return prep_imgs, orig_images, target_arr
 
 
-
+    def __get_file_name(self,index):
+        return self.metadata_df.iloc[index]["name"]
 
 
     def load_images_and_targets(self,index):
@@ -70,11 +72,13 @@ class VideosDataset(Dataset):
         return image,orig_image, y 
         
     def __getitem__(self, index):
+        index+=self.starting_point
         X,orig_image, y = self.load_images_and_targets(index)
         X = torch.tensor(X)
+        filename = self.__get_file_name(index)
 
             
-        return X,orig_image, y
+        return X,orig_image, y, filename
 
     def collate_func(self, batch):
         pass
