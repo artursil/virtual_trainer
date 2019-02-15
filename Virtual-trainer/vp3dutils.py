@@ -1,3 +1,8 @@
+"""
+@author: Ahmad Kurdi
+Utility functions for Virtual Trainer portfolio project.
+DSR portfolio project with Artur Silicki
+"""
 import numpy as np
 import re
 import os
@@ -13,6 +18,8 @@ from VideoPose3D.common.utils import deterministic_random
 
 
 def fetch_keypoints(keypoint_file, subjects, action_list, subset=1):
+    # fetch 2D keypoints from npz file
+
     keypoints = np.load(keypoint_file)['positions_2d'].item() # load keypoints
     action_ident = np.eye(len(action_list)) #identity matrix to generate one hot
     
@@ -43,7 +50,8 @@ def fetch_keypoints(keypoint_file, subjects, action_list, subset=1):
 
 
 def load_VP3D_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, channels):
-    
+    # build and populate base models
+ 
     # instantiate models
     model_pos = ModdedStridedModel(in_joints, in_dims, out_joints,
                                 filter_widths=filter_widths, causal=True, dropout=0.25, channels=channels)
@@ -63,11 +71,16 @@ def modify_model(model, embedding_len, classes):
     channels =  model.layers_conv[ind-2].in_channels
     stride = model.layers_conv[ind-2].stride
     kernel = model.layers_conv[ind-2].kernel_size
+    # insert modified layers
     model.layers_conv[ind-2] = nn.Conv1d(channels,embedding_len,kernel, dilation=dilation, stride=stride, bias=False)
     model.layers_conv[ind-1] = nn.Conv1d(embedding_len,embedding_len,1, dilation=1, bias=False)
     model.layers_bn[ind-2] = nn.BatchNorm1d(embedding_len, momentum=0.1)
     model.layers_bn[ind-1] = nn.BatchNorm1d(embedding_len, momentum=0.1)
     model.shrink = nn.Conv1d(embedding_len,classes,1)
+    # initialise weights of modified layers
+    torch.nn.init.xavier_normal_(model.layers_conv[ind-2].weight)
+    torch.nn.init.xavier_normal_(model.layers_conv[ind-1].weight)
+    torch.nn.init.xavier_normal_(model.shrink.weight)
     return model
 
 

@@ -1,6 +1,7 @@
 """
-@author Ahmad Kurdi
+@author: Ahmad Kurdi
 Sequence generators for Virtual Trainer portfolio project.
+DSR portfolio project with Artur Silicki
 Simplified adaption of VideoPose3D generator classes
 """
 import numpy as np
