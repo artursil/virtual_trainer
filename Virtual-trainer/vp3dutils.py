@@ -67,7 +67,7 @@ def modify_model(model, embedding_len, classes):
     model.layers_conv[ind-1] = nn.Conv1d(embedding_len,embedding_len,1, dilation=1, bias=False)
     model.layers_bn[ind-2] = nn.BatchNorm1d(embedding_len, momentum=0.1)
     model.layers_bn[ind-1] = nn.BatchNorm1d(embedding_len, momentum=0.1)
-    model.shrink = nn.Conv1d(embedding_len,classes)
+    model.shrink = nn.Conv1d(embedding_len,classes,1)
     return model
 
 
