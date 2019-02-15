@@ -20,6 +20,8 @@ analytics/
 __pycache__/
 *.py[cod]
 *$py.class
+*/checkpoint/
+*/data/
 
 # C extensions
 *.so

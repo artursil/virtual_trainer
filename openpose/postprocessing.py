@@ -162,7 +162,7 @@ def more_keypoints(personwiseKeypoints,kp_threshold):
     for n in range(n_plp):
         kp_sum = sum(personwiseKeypoints[n]==-1)
         num_kp[n] = kp_sum
-    inds = np.nonzero(num_kp>=kp_threshold)[0]
+    inds = np.nonzero(num_kp<=kp_threshold)[0]
     if inds.shape[0]==0:
         return personwiseKeypoints[[np.argmax(num_kp)]]
     else:
