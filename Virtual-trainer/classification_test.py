@@ -20,8 +20,8 @@ except OSError as e:
 CHECKPATH = 'checkpoint'
 
 # parameters
-batch_size = 1024
-epochs = 5
+batch_size = 2048
+epochs = 10
 embedding_len = 128
 lr, lr_decay = 0.001 , 0.95 
 
@@ -84,10 +84,8 @@ losses_train = []
 losses_test = []
 
 while epoch < epochs:
-    epoch_loss_train = 0 
-    vp3d_model.train()
-
-    avg_time = []    
+    epoch_loss_train = [] 
+    vp3d_model.train()  
     # train minibatches
     for batch_act, batch_2d in train_generator.next_epoch():
         batch_act = np.argmax(batch_act,axis=1).reshape(-1,1)
@@ -101,7 +99,7 @@ while epoch < epochs:
         pred = vp3d_model(poses)
         batch_loss = loss_fun(pred, action)
         print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
-        epoch_loss_train += batch_loss 
+        epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
         gc.collect() # only needed in cpu 
@@ -111,7 +109,7 @@ while epoch < epochs:
     with torch.no_grad():
         eval_model.load_state_dict(vp3d_model.state_dict())
         eval_model.eval()
-        epoch_loss_test = 0
+        epoch_loss_test = []
         for batch_act, batch_2d in test_generator.next_epoch():
             batch_act = np.argmax(batch_act,axis=2)
             action = torch.from_numpy(batch_act.astype('long'))
@@ -121,21 +119,21 @@ while epoch < epochs:
                 poses = poses.cuda()         
             pred = eval_model(poses)
             batch_loss = loss_fun(pred, action)
-            epoch_loss_test += batch_loss
+            epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             gc.collect() # only needed in cpu
         losses_test.append(epoch_loss_test)
 
     print('{{"metric": "Cross Entropy Loss", "value": {}, "epoch": {}}}'.format(
-            losses_train.item(), epoch))
+            np.mean(epoch_loss_train), epoch)) 
     print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
-            losses_test.item(), epoch))
+            np.mean(epoch_loss_test), epoch)) 
 
     # checkpoint every epoch
     torch.save({
             'epoch': epoch,
             'model_state_dict': vp3d_model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict()
-            }, CHECKPATH)
+            }, os.path.join(CHECKPATH,f'model-{epoch}.pth') )
 
     lr *= lr_decay
     for param_group in optimizer.param_groups:
