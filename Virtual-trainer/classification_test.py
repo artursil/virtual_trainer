@@ -20,7 +20,7 @@ except OSError as e:
 CHECKPATH = 'checkpoint'
 
 # parameters
-batch_size = 256
+batch_size = 1024
 epochs = 5
 embedding_len = 128
 lr, lr_decay = 0.001 , 0.95 

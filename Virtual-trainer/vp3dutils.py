@@ -58,15 +58,16 @@ def load_VP3D_model(chk_filename, in_joints, in_dims, out_joints, filter_widths,
 
 def modify_model(model, embedding_len, classes):
     # modify final block and output layer
-    dilation = model.layers_conv[-2].dilation
-    channels =  model.layers_conv[-2].in_channels
-    stride = model.layers_conv[-2].stride
-    kernel = model.layers_conv[-2].kernel_size
-    model.layers_conv[-2] = nn.Conv1d(channels,embedding_len,kernel, dilation=dilation, stride=stride, bias=False)
-    model.layers_conv[-1] = nn.Conv1d(embedding_len,embedding_len,1, dilation=1, bias=False)
-    model.layers_bn[-2] = nn.BatchNorm1d(embedding_len, momentum=0.1)
-    model.layers_bn[-1] = nn.BatchNorm1d(embedding_len, momentum=0.1)
-    model.shrink = nn.Linear(embedding_len,classes)
+    ind = len(model.layers_bn)
+    dilation = model.layers_conv[ind-2].dilation
+    channels =  model.layers_conv[ind-2].in_channels
+    stride = model.layers_conv[ind-2].stride
+    kernel = model.layers_conv[ind-2].kernel_size
+    model.layers_conv[ind-2] = nn.Conv1d(channels,embedding_len,kernel, dilation=dilation, stride=stride, bias=False)
+    model.layers_conv[ind-1] = nn.Conv1d(embedding_len,embedding_len,1, dilation=1, bias=False)
+    model.layers_bn[ind-2] = nn.BatchNorm1d(embedding_len, momentum=0.1)
+    model.layers_bn[ind-1] = nn.BatchNorm1d(embedding_len, momentum=0.1)
+    model.shrink = nn.Conv1d(embedding_len,classes)
     return model
 
 

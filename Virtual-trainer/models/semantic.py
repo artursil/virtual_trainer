@@ -26,8 +26,6 @@ class ModdedStridedModel(TemporalModelOptimized1f):
             
             x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
             x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
-        
-        x = x.view(x.shape[0],-1)
         x = self.shrink(x)
         return x
 
@@ -57,7 +55,5 @@ class ModdedTemporalModel(TemporalModel):
             
             x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
             x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
-        
-        x = x.view(x.shape[0],-1)
         x = self.shrink(x)
         return x
