@@ -113,7 +113,7 @@ while epoch < epochs:
         eval_model.eval()
         epoch_loss_test = 0
         for batch_act, batch_2d in test_generator.next_epoch():
-            batch_act = np.argmax(batch_act,axis=1).reshape(-1,1)
+            batch_act = np.argmax(batch_act,axis=2)
             action = torch.from_numpy(batch_act.astype('long'))
             poses = torch.from_numpy(batch_2d.astype('float32'))
             if torch.cuda.is_available():
