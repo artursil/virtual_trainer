@@ -37,7 +37,7 @@ class VideoScraper:
                 self.__download_yt_video(quiet)
             else:
                 self.__download_other_video()
-        except:
+        except AttributeError:
             print(f"Problem with this url: {self.url}")
             return False
         else:

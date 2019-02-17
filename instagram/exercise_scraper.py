@@ -2,6 +2,8 @@ import numpy as np
 from instagram.create_metadata import create_metadata
 from utils import *
 from video_extract import VideoScraper
+import requests
+from bs4 import BeautifulSoup
 
 class ExerciseScraper():
     def __init__(self,path,exercise_type):
@@ -149,6 +151,33 @@ class ExerciseScraper():
     def __read_download_files(self):
         return pd.read_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df.csv")
 
+    def update_urls(self):
+        df = self.__read_download_files()
+        df_new = df.copy()
+        df_new.reset_index(drop=True,inplace=True)
+        for ix,row in df.iterrows():
+            new_url = self.get_new_url(shortcode=row["shortcode"])
+            df_new.loc[ix,"video_url"]= new_url
+            assert df_new.iloc[ix]["video_url"]==new_url
+        df_new.to_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df2.csv")
+
+
+    @staticmethod
+    def get_new_url(shortcode):
+        headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) \
+                     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36'}
+        shortcode_url = f"https://www.instagram.com/p/{shortcode}"
+        page = requests.get(shortcode_url,headers=headers)
+        soup = BeautifulSoup(page.content,'html.parser')
+        if str(soup.title).lower().find("page not found")>-1:
+            print(f"Page not found for shortcode: {shortcode}")
+            new_url=""
+        else:
+            new_url = soup.find('meta', attrs={'property': 'og:video'}).get('content')
+            if new_url=="":
+                print(f"Wasn't able to get new url for shortcode: {shortcode}")
+        return new_url
+
     def download_videos(self,append):
         self.__delete_duplicates()
         df = self.__read_download_files()
@@ -165,14 +194,20 @@ class ExerciseScraper():
             title = slugify(row['text'])[:50]
             filename = row['filename']
             shortcode = row['shortcode']
-            if f"{title}.mp4" in self.self.downloaded_files_df["files2"]:
+            if f"{title}.mp4" in self.downloaded_files_df["files2"]:
                 print(f"{title} already downloaded")
+                continue
+            if type(url)!=str:
                 continue
             video = VideoScraper(url,self.path,self.exercise,video_type="other",filename=filename)
             if video.error==False:
                 success = video.download_video()
                 if success:
-                    duration = video.duration
+                    try:
+                        duration = video.duration
+                    except FileNotFoundError as e:
+                        print(e)
+                        continue
                     down_data_df = self.append_df(down_data_df,vid,video.filename,video.filepath,title,\
                                             duration,row['reps'],shortcode,self.exercise,text)
         down_data_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
