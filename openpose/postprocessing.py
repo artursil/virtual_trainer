@@ -290,11 +290,11 @@ def interpolate(df):
             df[x_cord+"_orig"] = df[x_cord]
             df[y_cord+"_orig"] = df[y_cord]
             try:
-            new_x = int(np.mean(df.loc[df[x_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
-                                        df[x_cord].value_counts(bins=3).iloc[[0]].index[0].right),x_cord]))
+                new_x = int(np.mean(df.loc[df[x_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
+                                            df[x_cord].value_counts(bins=3).iloc[[0]].index[0].right),x_cord]))
 
-            new_y = int(np.mean(df.loc[df[y_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
-                                        df[y_cord].value_counts(bins=3).iloc[[0]].index[0].right),y_cord]))
+                new_y = int(np.mean(df.loc[df[y_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
+                                            df[y_cord].value_counts(bins=3).iloc[[0]].index[0].right),y_cord]))
             except ValueError:
                 df[x_cord] = np.nan
                 df[y_cord] = np.nan               
