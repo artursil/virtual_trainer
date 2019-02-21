@@ -19,15 +19,18 @@ EPOCHS=1
 
 
 
-def main(path,starting_point):
+def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
     weight_name = './openpose/weights/openpose_mpii_best.pth.tar'
     model = get_model('vgg19')     
     model.load_state_dict(torch.load(weight_name)['state_dict'])
     model = torch.nn.DataParallel(model)
     model = model.cuda()
     model.float()
-    
-    dataset = VideosDataset(path,EXC_DICT,200,transform=None,starting_point=starting_point)
+    if swapped==True:
+        transform = transforms.RandomHorizontalFlip(p=1)
+    else:
+        transform=None
+    dataset = VideosDataset(path,EXC_DICT,200,transform=transform,starting_point=starting_point)
     # X,orig_images,y = dataset[255]
     dl = DataLoader(dataset, batch_size=1,sampler=None)
 
@@ -50,6 +53,7 @@ def main(path,starting_point):
             frame_counter = -1
             clip_df = pd.DataFrame()
             rnd_images = [random.randint(0,X_full.shape[0]-1) for x in  range(3)]
+            st_img = time.time()
             for b in range(3):
                 if b==0:
                     X = X_full[:third_bs,:,:,:]
@@ -66,7 +70,6 @@ def main(path,starting_point):
                 output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
                 output = output2.detach().cpu().numpy()
         
-                
                 for j in range(X.shape[0]):
                     img = orig_images[j].detach().cpu().numpy()
                     frame = img.copy()
@@ -129,13 +132,16 @@ def main(path,starting_point):
                     clip_df = clip_df.append(pd.DataFrame(df_dict,index=[0]),ignore_index=True)
                     
                     
-                    if frame_counter in rnd_images:
+                    if save_img==True and frame_counter in rnd_images:
                         save_picture(f"{path.replace('clipped','processed')}/{filename}_{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
-        
+
             clip_df = interpolate(clip_df)
-            for f in rnd_images:
-                frame_clone = orig_images_full[f].detach().cpu().numpy()
-                draw_interpolated(path,ix,f,clip_df,frame_clone,filename) 
+            if time_verbose:
+                print(f"Time per clip: {time.time()-st_img}")
+            if save_img==True:
+                for f in rnd_images:
+                    frame_clone = orig_images_full[f].detach().cpu().numpy()
+                    draw_interpolated(path,ix,f,clip_df,frame_clone,filename) 
 
             outputs_df = outputs_df.append(clip_df,ignore_index=True)
             if (ix+1) % 100==0:
