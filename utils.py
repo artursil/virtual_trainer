@@ -132,3 +132,10 @@ def create_metadata_df(path,filename):
     return metadata_df
 
 
+def timer(func):
+    def timer_wrapper(*args,**kwargs):
+        st=time.time()
+        func(*args,**kwargs)
+        print(f'{func.__name__} time: {time.time()-st}')
+        return func(*args,**kwargs)
+    return timer_wrapper
