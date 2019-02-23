@@ -13,10 +13,9 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 from models.semantic import NaiveBaselineModel, NaiveStridedModel
 from dataloader import *
-from generators import *
+from simple_generators import SimpleSequenceGenerator
 
 try:
     # Create checkpoint directory if it does not exist
@@ -62,7 +61,6 @@ poses = poses_op + poses_vp3d
 balanced = balance_dataset(np.array(actions))
 actions = [actions[b] for b in balanced]
 poses = [poses[b] for b in balanced]
-X_train, X_test, y_train, y_test = train_test_split(poses, actions, stratify=actions, test_size=0.20)
 
 # build models
 classes = len(np.unique(actions))
@@ -81,10 +79,9 @@ receptive_field = trn_model.base_model.receptive_field()
 pad = (receptive_field - 1) // 2 
 causal_shift = pad
 
-# build generators
+# build generator
 
-trn_generator = BatchedGenerator(batch_size,y_train,X_train,pad=pad, causal_shift=causal_shift)
-vld_generator = SequenceGenerator(y_test,X_test,pad=pad,causal_shift=causal_shift)
+generator = SimpleSequenceGenerator(batch_len,actions,poses,pad=pad,causal_shift=causal_shift,test_split=split_ratio)
 
 if torch.cuda.is_available():
     trn_model = trn_model.cuda()
@@ -99,8 +96,8 @@ while epoch < epochs:
     epoch_loss_train = [] 
     trn_model.train()  
     # train minibatches
-    for batch_act, batch_2d in trn_generator.next_epoch():
-        batch_act = batch_act.reshape(-1,1)
+    for batch_act, batch_2d in generator.next_batch():
+        #batch_act = batch_act.reshape(-1,1)
         action = torch.from_numpy(batch_act.astype('long'))
         poses = torch.from_numpy(batch_2d.astype('float32'))
         if torch.cuda.is_available():
@@ -122,7 +119,7 @@ while epoch < epochs:
         eval_model.load_state_dict(trn_model.state_dict())
         eval_model.eval()
         epoch_loss_test = []
-        for batch_act, batch_2d in vld_generator.next_epoch():
+        for batch_act, batch_2d in generator.next_validation():
             action = torch.from_numpy(batch_act.astype('long'))
             poses = torch.from_numpy(batch_2d.astype('float32'))
             if torch.cuda.is_available():
@@ -149,4 +146,5 @@ while epoch < epochs:
     lr *= lr_decay
     for param_group in optimizer.param_groups:
         param_group['lr'] *= lr_decay
-    epoch += 1    
+    epoch += 1
+    generator.next_epoch()    
