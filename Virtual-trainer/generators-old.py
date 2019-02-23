@@ -1,11 +1,9 @@
 """
-@author: Ahmad Kurdi
+@author Ahmad Kurdi
 Sequence generators for Virtual Trainer portfolio project.
-DSR portfolio project with Artur Silicki
 Simplified adaption of VideoPose3D generator classes
 """
 import numpy as np
-from sklearn.model_selection import ShuffleSplit
 from itertools import zip_longest
 
 class SequenceGenerator:
@@ -25,7 +23,6 @@ class SequenceGenerator:
         self.causal_shift = causal_shift
         self.poses = poses
         self.actions = actions
-
         
     def num_frames(self):
         count = 0
