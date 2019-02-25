@@ -120,15 +120,19 @@ while epoch < epochs:
         eval_model.eval()
         epoch_loss_test = []
         for y_val, batch_2d in generator.next_validation():
-            top_pad = trn_model.top_model.receptive_field() - 1 // 2
-            batch_act = np.full(batch_2d.shape[1] - top_pad, y_val)
-            np.expand_dims(batch_act, axis=0)
+            #top_pad = trn_model.top_model.receptive_field() - 1 // 2
+            #batch_act = np.full(batch_2d.shape[1] - top_pad, y_val)
+            #np.expand_dims(batch_act, axis=0)
             action = torch.from_numpy(batch_act.astype('long'))
             poses = torch.from_numpy(batch_2d.astype('float32'))
             if torch.cuda.is_available():
-                action = action.cuda()
+                #action = action.cuda()
                 poses = poses.cuda()         
             pred = eval_model(poses)
+            action = np.full(pred.shape, y_val)
+            action = torch.from_numpy(batch_act.astype('long'))
+            if torch.cuda.is_available():
+                action = action.cuda()
             batch_loss = loss_fun(pred, action)
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             #gc.collect() # only needed in cpu
