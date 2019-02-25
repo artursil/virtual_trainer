@@ -76,7 +76,7 @@ loss_fun = nn.CrossEntropyLoss()
 optimizer = optim.Adam(train_params,lr, amsgrad=True)
 
 receptive_field = trn_model.base_model.receptive_field()
-pad = (receptive_field - 1) // 2 
+pad = (receptive_field - 1) 
 causal_shift = pad
 
 # build generator
@@ -119,7 +119,10 @@ while epoch < epochs:
         eval_model.load_state_dict(trn_model.state_dict())
         eval_model.eval()
         epoch_loss_test = []
-        for batch_act, batch_2d in generator.next_validation():
+        for y_val, batch_2d in generator.next_validation():
+            top_pad = trn_model.top_model.receptive_field() - 1 // 2
+            batch_act = np.full(batch_2d.shape[1] - top_pad, y_val)
+            np.expand_dims(batch_act, axis=0)
             action = torch.from_numpy(batch_act.astype('long'))
             poses = torch.from_numpy(batch_2d.astype('float32'))
             if torch.cuda.is_available():
