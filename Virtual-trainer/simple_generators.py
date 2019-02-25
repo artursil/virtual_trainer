@@ -57,9 +57,8 @@ class SimpleSequenceGenerator:
             yield self.batch_y, self.batch_X 
 
     def next_validation(self):
-        for ix, y_val in enumerate(self.y_test):
+        for ix, y in enumerate(self.y_test):
             X = self.X_test[ix]
-            y = np.full(len(X)-self.pad, y_val)
-            yield np.expand_dims(y, axis=0) , np.expand_dims(X,axis=0)
+            yield y , np.expand_dims(X,axis=0)
             
             
