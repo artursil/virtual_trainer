@@ -268,7 +268,7 @@ def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,filename,desc="inter"):
         pass
 
 
-def interpolate(df):
+def interpolate(df,interpolate_feet=True):
     columns = ['0_0', '0_1', '1_0',
            '1_1', '2_0', '2_1', '3_0', '3_1', '4_0', '4_1', '5_0', '5_1', '6_0',
            '6_1', '7_0', '7_1', '8_0', '8_1', '9_0', '9_1', '10_0', '10_1', '11_0',
@@ -289,18 +289,19 @@ def interpolate(df):
             y_cord = str(c) + "_1"
             df[x_cord+"_orig"] = df[x_cord]
             df[y_cord+"_orig"] = df[y_cord]
-            try:
-                new_x = int(np.mean(df.loc[df[x_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
-                                            df[x_cord].value_counts(bins=3).iloc[[0]].index[0].right),x_cord]))
+            if interpolate_feet:
+                try:
+                    new_x = int(np.mean(df.loc[df[x_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
+                                                df[x_cord].value_counts(bins=3).iloc[[0]].index[0].right),x_cord]))
 
-                new_y = int(np.mean(df.loc[df[y_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
-                                            df[y_cord].value_counts(bins=3).iloc[[0]].index[0].right),y_cord]))
-            except ValueError:
-                df[x_cord] = np.nan
-                df[y_cord] = np.nan               
-            else:
-                df[x_cord] = new_x
-                df[y_cord] = new_y
+                    new_y = int(np.mean(df.loc[df[y_cord].between(df[x_cord].value_counts(bins=3).iloc[[0]].index[0].left,
+                                                df[y_cord].value_counts(bins=3).iloc[[0]].index[0].right),y_cord]))
+                except ValueError:
+                    df[x_cord] = np.nan
+                    df[y_cord] = np.nan               
+                else:
+                    df[x_cord] = new_x
+                    df[y_cord] = new_y
 
         
     df.loc[df["num_keypoints"]<=10,columns]= np.nan

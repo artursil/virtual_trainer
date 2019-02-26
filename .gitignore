@@ -1,3 +1,6 @@
+.directory
+*.bin
+*.npz
 videos/
 images/
 connector/

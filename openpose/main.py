@@ -135,13 +135,19 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
                     if save_img==True and frame_counter in rnd_images:
                         save_picture(f"{path.replace('clipped','processed')}/{filename}_{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
 
-            clip_df = interpolate(clip_df)
+            exc_inter_list = [k for k,v in EXC_DICT.items() if v in EXC_INTER_FEET]
+            if y[0][0] in exc_inter_list:
+                interpolate_feet=True
+            else:
+                interpolate_feet=False
+            clip_df = interpolate(clip_df,interpolate_feet=interpolate_feet)
             if time_verbose:
                 print(f"Time per clip: {time.time()-st_img}")
             if save_img==True:
                 for f in rnd_images:
                     frame_clone = orig_images_full[f].detach().cpu().numpy()
                     draw_interpolated(path,ix,f,clip_df,frame_clone,filename) 
+
 
             outputs_df = outputs_df.append(clip_df,ignore_index=True)
             if (ix+1) % 100==0:

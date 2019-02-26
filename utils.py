@@ -13,6 +13,9 @@ from itertools import chain
 from langdetect import detect
 
 
+EXC_INTER_FEET = ['deadlift','squat','bodyweightsquats']
+
+
 def get_config_file(path):
     _path=path.replace("/txt_files","")
     with open(f'{_path}/config_file.json', encoding="utf8") as json_file:
