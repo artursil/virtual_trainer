@@ -9,7 +9,20 @@ import torchvision.transforms as transforms
 
 EXC_DICT = {
             0:'squat',
-            1:'deadlift'
+            1:'deadlift',
+            2:'pushups',
+            3:'pullups',
+            4:'wallpushups',
+            5:'lunges',
+            6:'squats',
+            7:'cleanandjerk',
+            8:'jumprope',
+            9:'soccerjuggling',
+            10:'taichi',
+            11:'jumprope',
+            12:'golfswing',
+            13:'bodyweightsquats'
+            
 }
 
 class VideosDataset(Dataset):
@@ -33,7 +46,7 @@ class VideosDataset(Dataset):
         dirs = os.listdir(self.path)
         metadata_df = pd.DataFrame()
         for d in dirs:
-            if d in list(reverse_dict.keys()):
+            if d.lower() in list(reverse_dict.keys()):
                 files = os.listdir(f"{self.path}/{d}/")
                 for file in files:
                     row = {
