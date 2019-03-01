@@ -1,11 +1,13 @@
 import os
 import pandas as pd
 import numpy as np
+import random
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from video_extract import VideoScraper
 import torchvision.transforms as transforms
+from hashlib import md5
 
 EXC_DICT = {
             0:'squat',
@@ -113,14 +115,21 @@ class VideosDataset(Dataset):
         return X,orig_image, y, filename
 
     @classmethod
-    def from_url(cls,url,path):
+    def from_url(cls,url,path,max_duration=6):
         #TODO Change if there is a way to chop video without downloading
         #TODO use tmp file for downloading video and delete it
         #TODO avi and mp4
-        single_video=True
-        video = VideoScraper(url,path,'unknown','mp4',video_type='other')
+        filename = md5(str(random.random).encode()).hexdigest()  
+        video = VideoScraper(url,path,"from_urls",'mp4',video_type='other',filename=filename)
         video.download_video()
-        video_path = f"{path}videos/{video.exercise}/{video.filename}.{video.quality}"
+        duration = video.duration
+        print(duration)
+        print(video.filepath)
+        if duration>max_duration:
+            start = (duration-max_duration)//2
+            video.clip_video(start,start+6,replace=True)
+
+        video_path = f"{path}videos/{video.exercise}/{video.filename}2.{video.quality}"
         return cls(video_path, exc_dict=None,resize=220,transform=None,starting_point=0,single_video =True)
 
     @classmethod

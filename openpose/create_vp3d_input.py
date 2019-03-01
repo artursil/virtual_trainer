@@ -2,7 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 import random
-path = "/home/artursil/Downloads/processed_other/"
+# path = "/home/artursil/Downloads/processed_other/"
+path = "/home/artursil/Downloads/processed/"
 
 
 EXC_DICT = {
@@ -109,7 +110,8 @@ list_of_exc_classes = [0,1,2,3,4,5,7]
 output_df = create_exc_other(output_df,list_of_exc_classes)
 
 
-output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints_rest2.csv')
+# output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints_rest2.csv')
+output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints2.csv')
 
 
 
