@@ -32,6 +32,7 @@ class VideoScraper:
         self.clipped_path = self.clip_path()
 
     def download_video(self,quiet=True):
+        self.__delete_tmps()
         try:
             if self.video_type=="youtube":
                 self.__download_yt_video(quiet)
@@ -42,6 +43,14 @@ class VideoScraper:
             return False
         else:
             return True
+
+    def __delete_tmps(self):
+        if self.base_path.find('tmp')>-1:
+            tmp_path = f"{self.base_path}videos/{self.exercise}/"
+            if os.path.isdir(tmp_path):
+                tmps = os.listdir(tmp_path)
+                for file in tmps:
+                    os.remove(f'{tmp_path}/{file}')
 
     def __download_yt_video(self,quiet=True):
         stream = self.select_stream()
@@ -79,9 +88,15 @@ class VideoScraper:
             url = _url.split("%")[0]
         return url
 
-    def clip_video(self,start_t,end_t):
+    def clip_video(self,start_t,end_t,replace=False):
         if os.path.isfile(f"{self.filepath}.mp4"):
-            return VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
+            if replace:
+                clip = VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
+                clip.write_videofile(f"{self.filepath}2.mp4")
+                os.remove(f"{self.filepath}.mp4")
+                self.filepath= f'{self.filepath}2'
+            else:
+                return VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
         else:
             raise FileNotFoundError(f"{self.filepath}")
 
