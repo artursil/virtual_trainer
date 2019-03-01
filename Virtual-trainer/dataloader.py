@@ -22,22 +22,29 @@ def fetch_vp3d_keypoints(keypoint_file, subjects, action_list, class_val, subset
 
     # traverse dataset and append return lists
     for subject in subjects:
-        for action in keypoints[subject].keys(): 
+        for action in keypoints[subject].keys():
             action_clean = re.sub(r'\s\d+$', '', action)
-            if action_clean in action_list: #skip actions not in action_list    
+            if action_clean in action_list: #skip actions not in action_list
                 poses_2d = keypoints[subject][action]
                 for i in range(len(poses_2d)): # Iterate across cameras
                     out_poses_2d.append(poses_2d[i][::2]) #stride 2 to downsample framerate
                     actions.append(class_val)
-    
+
     # sample a subset if requested
+    actions_final = []
+    out_poses_2d_final = []
+    max_frames = 180
+    min_frames = 60
     if subset < 1:
         for i in range(len(out_poses_2d)):
-            n_frames = int(round(len(out_poses_2d[i]) * subset))
-            start = deterministic_random(0, len(out_poses_2d[i]) - n_frames + 1, str(len(out_poses_2d[i])))
-            out_poses_2d[i] = out_poses_2d[i][start:start+n_frames]
-    
-    return actions, out_poses_2d
+            n_subclips = out_poses_2d[i].shape[0]//max_frames
+            if out_poses_2d[i].shape[0]-max_frames*n_subclips>min_frames:
+                n_subclips+=1
+            for ns in range(n_subclips):
+                out_poses_2d_final.append(out_poses_2d[i][max_frames*ns:max_frames*(ns+1),:,:])
+                actions_final.append(actions[i])
+
+    return actions_final, out_poses_2d_final
 
 def fetch_openpose_keypoints(keypoint_file):
 
@@ -59,7 +66,8 @@ def fetch_openpose_keypoints(keypoint_file):
 
     return actions, out_poses_2d
 
-def balance_dataset(targets):
+def balance_dataset(targets,seed):
+    np.random.seed(seed)
     classes, counts = np.unique(targets,return_counts=True)
     sm_class = classes[counts.argmin()]
     smpl_size = counts.min()

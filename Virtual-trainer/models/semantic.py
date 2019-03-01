@@ -16,7 +16,7 @@ class NaiveStridedModel(nn.Module):
     Strided version for training
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                    causal, dropout, channels, pretrained_weights, embedding_len, classes):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
         super().__init__()
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
@@ -37,7 +37,7 @@ class NaiveBaselineModel(nn.Module):
     Reference version for running
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                    causal, dropout, channels, pretrained_weights, embedding_len, classes):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
         super().__init__()
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
