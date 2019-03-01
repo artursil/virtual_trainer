@@ -89,29 +89,30 @@ def create_exc_other(input_df,list_of_exc_classes):
     return exc_set
 
 
+def main():
+    out_files = os.listdir(path)
+    out_files = [file for file in out_files if file.find("df")>-1]
+    output_df = pd.DataFrame()
 
-out_files = os.listdir(path)
-out_files = [file for file in out_files if file.find("df")>-1]
-output_df = pd.DataFrame()
-
-for file in out_files:
-    df = pd.read_csv(f"{path}/{file}")
-    output_df = output_df.append(df)
-    output_df.drop_duplicates(inplace=True)
-
-
-output_df = drop_incomplete(output_df)
-output_df = drop_spotters(output_df)
-output_df = drop_bad_interpolation(output_df)
-output_df = delete_nans(output_df)
-multiplier = round(800/224,2)
-output_df = rescale_keypoints(output_df,multiplier)
-list_of_exc_classes = [0,1,2,3,4,5,7]
-output_df = create_exc_other(output_df,list_of_exc_classes)
+    for file in out_files:
+        df = pd.read_csv(f"{path}/{file}")
+        output_df = output_df.append(df)
+        output_df.drop_duplicates(inplace=True)
 
 
-# output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints_rest2.csv')
-output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints2.csv')
+    output_df = drop_incomplete(output_df)
+    output_df = drop_spotters(output_df)
+    output_df = drop_bad_interpolation(output_df)
+    output_df = delete_nans(output_df)
+    multiplier = round(800/224,2)
+    output_df = rescale_keypoints(output_df,multiplier)
+    list_of_exc_classes = [0,1,2,3,4,5,7]
+    output_df = create_exc_other(output_df,list_of_exc_classes)
 
 
+    # output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints_rest2.csv')
+    output_df.to_csv('/home/artursil/Documents/vt2/recipe1/Data/Keypoints/keypoints2.csv')
+
+if __name__ == "__main__":
+    main()
 
