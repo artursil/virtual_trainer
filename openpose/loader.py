@@ -127,7 +127,7 @@ class VideosDataset(Dataset):
         print(video.filepath)
         if duration>max_duration:
             start = (duration-max_duration)//2
-            video.clip_video(start,start+6,replace=True)
+            video.clip_video(start,start+max_duration,replace=True)
 
         video_path = f"{path}videos/{video.exercise}/{video.filename}2.{video.quality}"
         return cls(video_path, exc_dict=None,resize=220,transform=None,starting_point=0,single_video =True)
