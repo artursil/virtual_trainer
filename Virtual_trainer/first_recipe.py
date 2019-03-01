@@ -38,7 +38,7 @@ subjects = ['S1','S5','S6','S7','S8']
 instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
 
 # --- Parameters ---
-batch_size = 2048
+batch_size = 1024
 epochs = 20
 embedding_len = 128
 lr, lr_decay = 0.001 , 0.95 

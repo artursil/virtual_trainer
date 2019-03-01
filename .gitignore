@@ -17,11 +17,12 @@ openpose/weights/
 ctags.exe
 analytics/
 # Byte-compiled / optimized / DLL files
-__pycache__/
+*__pycache__/
 *.py[cod]
 *$py.class
 */checkpoint/
 */data/
+*Data/
 
 # C extensions
 *.so

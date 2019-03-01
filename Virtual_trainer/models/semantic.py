@@ -27,6 +27,7 @@ class NaiveStridedModel(nn.Module):
 
     def forward(self, x):
         x = self.base_model(x)
+        x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
         x = self.top_model(x)
         return x
 
@@ -48,6 +49,7 @@ class NaiveBaselineModel(nn.Module):
 
     def forward(self, x):
         x = self.base_model(x)
+        x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
         x = self.top_model(x)
         return x        
 
