@@ -66,6 +66,24 @@ def fetch_openpose_keypoints(keypoint_file):
 
     return actions, out_poses_2d
 
+def fetch_keypoints(keypoints):
+    actions = []
+    out_poses_2d = []
+    vid_idx = keypoints['vid_nr'].unique()
+    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1','8_0','8_1','9_0','9_1',
+                   '10_0','10_1','14_0','14_1','1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1',
+                   '4_0','4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
+    
+    for idx in vid_idx:
+        action = int(keypoints.loc[keypoints['vid_nr']==idx]['target'].head(1))
+        poses_2d = keypoints.loc[keypoints['vid_nr']==idx].sort_values(by="clip_id")[joint_order]
+        poses_2d = np.reshape(poses_2d.values,(-1,17,2))
+        if ~np.isnan(poses_2d).any():
+            out_poses_2d.append(poses_2d)
+            actions.append(action)
+
+    return actions, out_poses_2d
+
 def balance_dataset(targets,seed):
     np.random.seed(seed)
     classes, counts = np.unique(targets,return_counts=True)
@@ -79,3 +97,19 @@ def balance_dataset(targets,seed):
         idx = np.concatenate((idx,ix_))
     return idx
 
+def balance_dataset_recipe2(targets,seed):
+    np.random.seed(seed)
+    classes, counts = np.unique(targets,return_counts=True)
+    sm_class = classes[counts.argmin()]
+    smpl_size = counts.min()
+    smpl_size = 300
+    idx = np.where(targets == sm_class)[0]
+    for cl in range(len(classes)):
+        if classes[cl] == sm_class: 
+            continue
+        elif counts[cl]<=300:
+            ix_ = np.random.choice(np.where(targets == classes[cl])[0],counts[cl],False)
+        else:
+            ix_ = np.random.choice(np.where(targets == classes[cl])[0],smpl_size,False)
+        idx = np.concatenate((idx,ix_))
+    return idx

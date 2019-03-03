@@ -89,14 +89,14 @@ class VideoScraper:
         return url
 
     def clip_video(self,start_t,end_t,replace=False):
-        if os.path.isfile(f"{self.filepath}.mp4"):
+        if os.path.isfile(f"{self.filepath}.{self.quality}"):
             if replace:
-                clip = VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
-                clip.write_videofile(f"{self.filepath}2.mp4")
-                os.remove(f"{self.filepath}.mp4")
+                clip = VideoFileClip(f"{self.filepath}.{self.quality}").subclip(start_t,end_t)
+                clip.write_videofile(f"{self.filepath}2.{self.quality}")
+                os.remove(f"{self.filepath}.{self.quality}")
                 self.filepath= f'{self.filepath}2'
             else:
-                return VideoFileClip(f"{self.filepath}.mp4").subclip(start_t,end_t)
+                return VideoFileClip(f"{self.filepath}.{self.quality}").subclip(start_t,end_t)
         else:
             raise FileNotFoundError(f"{self.filepath}")
 

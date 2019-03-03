@@ -62,7 +62,7 @@ poses = poses_op + poses_op2
 
 # balance the dataset
 seed = 1234
-balanced = balance_dataset(np.array(actions),seed)
+balanced = balance_dataset_recipe2(np.array(actions),seed)
 actions = [actions[b] for b in balanced]
 poses = [poses[b] for b in balanced]
 
