@@ -37,7 +37,7 @@ subjects = ['S1','S5','S6','S7','S8']
 # Instagram Openpose estimations
 instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
-
+ucf_file_test = os.path.join(DATAPOINT,'Keypoints','keypoints_rest_test.csv')
 # --- Parameters ---
 batch_size = 1024
 epochs = 20
@@ -56,6 +56,7 @@ in_joints, in_dims, out_joints = 17, 2, 17
 # load dataset
 action_op, poses_op, vid_idx = fetch_openpose_keypoints(instagram_file)
 action_op2, poses_op2, vid_idx2 = fetch_openpose_keypoints(ucf_file)
+action_op_test, poses_op_test, vid_idx_test = fetch_openpose_keypoints(ucf_file_test)
 actions = action_op + action_op2
 actions = [action if action!=8 else 6 for action in actions]
 poses = poses_op + poses_op2
@@ -63,7 +64,12 @@ vid_idx = vid_idx + vid_idx2
 
 # balance the dataset
 seed = 1234
-balanced = balance_dataset_recipe2(np.array(actions),seed)
+balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
+actions_test = [actions[x] for x in test_ids]
+poses_test = [poses[x] for x in test_ids]
+actions_test = actions_test + action_op_test
+poses_test = poses_test + poses_op_test
+
 actions = [actions[b] for b in balanced]
 poses = [poses[b] for b in balanced]
 vid_idx = [vid_idx[b] for b in balanced]

@@ -67,7 +67,7 @@ def fetch_openpose_keypoints(keypoint_file):
         if ~np.isnan(poses_2d).any():
             out_poses_2d.append(poses_2d)
             actions.append(action)
-            return_idx.append[idx]
+            return_idx.append(idx)
 
     return actions, out_poses_2d, return_idx
 
@@ -108,6 +108,7 @@ def balance_dataset_recipe2(targets,seed):
     sm_class = classes[counts.argmin()]
     smpl_size = counts.min()
     smpl_size = 300
+    idx_all = np.array(range(len(targets)))
     idx = np.where(targets == sm_class)[0]
     for cl in range(len(classes)):
         if classes[cl] == sm_class: 
@@ -117,4 +118,5 @@ def balance_dataset_recipe2(targets,seed):
         else:
             ix_ = np.random.choice(np.where(targets == classes[cl])[0],smpl_size,False)
         idx = np.concatenate((idx,ix_))
-    return idx
+    idx_test = np.array([x for x in idx_all if x not in list(idx)])
+    return idx, idx_test

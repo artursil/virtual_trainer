@@ -222,6 +222,7 @@ def main(url,max_duration=6):
         softmax = torch.nn.Softmax(1)
         pred= softmax(pred)
         pred = pred.detach().cpu().numpy().squeeze()
+        print(pred)
         preds = np.argmax(pred,axis=0)
         print(preds)
         values, counts = np.unique(preds,return_counts=True)
@@ -230,6 +231,7 @@ def main(url,max_duration=6):
         ind = np.argmax(counts)
         print(EXC_DICT[values[ind]])
         msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
+
     # with torch.no_grad():
     #     eval_model.eval()
     #     epoch_loss_test = []
