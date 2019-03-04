@@ -18,10 +18,11 @@ class SimpleSequenceGenerator:
         self.receptive_field = 2*pad +1
         self.num_joints = self.poses[0].shape[-2]
         self.dims = self.poses[0].shape[-1]
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.poses, self.actions, stratify=self.actions, test_size=self.test_split)
         self.next_epoch()
     
     def next_epoch(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.poses, self.actions, stratify=self.actions, test_size=self.test_split)
+        
         self.build_chunks()
 
     def build_chunks(self):

@@ -53,16 +53,19 @@ channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 
 # load dataset
-action_op, poses_op = fetch_openpose_keypoints(instagram_file)
-action_vp3d, poses_vp3d = fetch_vp3d_keypoints(h36m_file,subjects,action_list,len(np.unique(action_op)),subset=0.5)
+action_op, poses_op, vid_idx_op = fetch_openpose_keypoints(instagram_file)
+action_vp3d, poses_vp3d, vid_idx_vp3d = fetch_vp3d_keypoints(h36m_file,subjects,action_list,len(np.unique(action_op)),subset=0.5)
 actions = action_op + action_vp3d
 poses = poses_op + poses_vp3d
+vid_idx = vid_idx_op + vid_idx_vp3d
 
 # balance the dataset
 seed = 1234
 balanced = balance_dataset(np.array(actions),seed)
 actions = [actions[b] for b in balanced]
 poses = [poses[b] for b in balanced]
+vid_idx = [vid_idx[b] for b in balanced]
+
 
 # build models
 classes = len(np.unique(actions))
@@ -149,8 +152,9 @@ while epoch < epochs:
             'model_state_dict': trn_model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'losses_test': losses_test,
-            'validation_targets' : validation_targets
-            }, os.path.join(CHECKPATH,f'model-{epoch}.pth') )
+            'validation_targets' : validation_targets,
+            'training_set' : vid_idx
+            }, os.path.join(CHECKPATH,f'Recipe-1-epoch-{epoch}.pth') )
 
     lr *= lr_decay
     for param_group in optimizer.param_groups:

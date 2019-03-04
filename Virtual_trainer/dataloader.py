@@ -19,6 +19,7 @@ def fetch_vp3d_keypoints(keypoint_file, subjects, action_list, class_val, subset
     keypoints = np.load(keypoint_file)['positions_2d'].item() # load keypoints
     actions = []
     out_poses_2d = []
+    return_idx = []
 
     # traverse dataset and append return lists
     for subject in subjects:
@@ -29,8 +30,10 @@ def fetch_vp3d_keypoints(keypoint_file, subjects, action_list, class_val, subset
                 for i in range(len(poses_2d)): # Iterate across cameras
                     out_poses_2d.append(poses_2d[i][::2]) #stride 2 to downsample framerate
                     actions.append(class_val)
+                    return_idx.append(f"{subject}_{action}")
 
     # sample a subset if requested
+    idx_final = []
     actions_final = []
     out_poses_2d_final = []
     max_frames = 180
@@ -43,11 +46,12 @@ def fetch_vp3d_keypoints(keypoint_file, subjects, action_list, class_val, subset
             for ns in range(n_subclips):
                 out_poses_2d_final.append(out_poses_2d[i][max_frames*ns:max_frames*(ns+1),:,:])
                 actions_final.append(actions[i])
+                idx_final.append(return_idx[i])
 
-    return actions_final, out_poses_2d_final
+    return actions_final, out_poses_2d_final, idx_final
 
 def fetch_openpose_keypoints(keypoint_file):
-
+    return_idx= []
     keypoints = pd.read_csv(keypoint_file)
     actions = []
     out_poses_2d = []
@@ -63,8 +67,9 @@ def fetch_openpose_keypoints(keypoint_file):
         if ~np.isnan(poses_2d).any():
             out_poses_2d.append(poses_2d)
             actions.append(action)
+            return_idx.append[idx]
 
-    return actions, out_poses_2d
+    return actions, out_poses_2d, return_idx
 
 def fetch_keypoints(keypoints):
     actions = []
