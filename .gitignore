@@ -29,6 +29,7 @@ analytics/
 tags
 *.avi
 *.mp4
+outputs*
 # C extensions
 *.so
 

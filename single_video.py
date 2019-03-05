@@ -86,8 +86,6 @@ channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 
 
-url = 'https://www.instagram.com/p/BucCac0h2_L/'
-max_duration=6
 def main(url,max_duration=6):
     if url.find('instagram.com/p/')>-1:
         print(url.split('/p/')[-1])
@@ -108,7 +106,6 @@ def main(url,max_duration=6):
         model.eval()
         batch = dataset[0]
         X_full,orig_images_full,_ = batch
-        out = cv2.VideoWriter('deadlift_good_form.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (224,224))
         for ix in range(X_full.shape[0]):
             X = X_full[ix,:,:,:].unsqueeze(0).to(DEVICE)
             img = orig_images_full[ix,:,:,:]
@@ -181,12 +178,10 @@ def main(url,max_duration=6):
             pic_key = picture_keypoints(personwiseKeypoints,keypoints_list,frameClone)
         #    plt.imshow(pic_key)
             cv2.imshow('window',cv2.resize(pic_key,(640,360)))
-            out.write(pic_key)
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 break
         clip_df = interpolate(clip_df,interpolate_feet=False)
-    out.release()
     clip_df =  delete_nans(clip_df)
     multiplier = round(800/224,2)
     clip_df =  rescale_keypoints(clip_df,multiplier)
@@ -203,7 +198,7 @@ def main(url,max_duration=6):
     pad = (receptive_field - 1) 
     causal_shift = pad
 
-    checkp = torch.load('/home/artursil/Documents/vt2/recipe1/checkpoint/model4-19.pth')
+    checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-19.pth')
     # checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/model-6.pth')
     checkp['model_state_dict']
     eval_model.load_state_dict(checkp['model_state_dict'])
@@ -231,28 +226,6 @@ def main(url,max_duration=6):
         ind = np.argmax(counts)
         print(EXC_DICT[values[ind]])
         msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
-
-    # with torch.no_grad():
-    #     eval_model.eval()
-    #     epoch_loss_test = []
-    #     preds = []
-    #     preds2 = []
-    #     for y_val, batch_2d in generator.next_validation():          
-    #         poses = torch.from_numpy(batch_2d.astype('float32'))
-    #         if torch.cuda.is_available():
-    #             poses = poses.cuda()         
-    #         pred = eval_model(poses)
-    #         preds2.append(pred/sum(pred))
-    #         pred = np.argmax(pred.detach().cpu().numpy())
-    #         preds.append(pred)
-
-    # values, counts = np.unique(preds,return_counts=True)
-    # print(preds2)
-    # print(values)
-    # print(counts)
-    # ind = np.argmax(counts)
-    # print(EXC_DICT[values[ind]])
-    # msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
 
 
 parser = argparse.ArgumentParser()

@@ -90,7 +90,8 @@ losses_train = []
 losses_test = []
 validation_targets = []
 
-checkp = torch.load('/home/artursil/Documents/vt2/recipe1/checkpoint/model4-19.pth')
+# checkp = torch.load('/home/artursil/Documents/vt2/recipe1/checkpoint/model4-19.pth')
+checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-19.pth')
 # checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/model-6.pth')
 eval_model.load_state_dict(checkp['model_state_dict'])
 
@@ -106,7 +107,8 @@ with torch.no_grad():
     test_losses = []
     accuracy_test = []
     for ix,poses in enumerate(poses_test):
-        print(ix)
+        if ix%1000==0:
+            print(ix)   
 #        poses = np.concatenate(poses)
         poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
         poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
@@ -138,74 +140,6 @@ with torch.no_grad():
 torch.save({
         'losses_test': test_losses,
         'test_targets' : targets,
-        'accuracy' : accuracy
+        'accuracy' : accuracy_test,
         }, os.path.join(CHECKPATH,f'Recipe-2-test-results.pth') )
-
-
-
-
-
-#while epoch < epochs:
-#    epoch_loss_train = [] 
-#    trn_model.train()  
-#    # train minibatches
-#    for batch_act, batch_2d in generator.next_batch():
-#        #batch_act = batch_act.reshape(-1,1)
-#        action = torch.from_numpy(batch_act.astype('long'))
-#        poses = torch.from_numpy(batch_2d.astype('float32'))
-#        if torch.cuda.is_available():
-#            action = action.cuda()
-#            poses = poses.cuda()
-#        
-#        optimizer.zero_grad()
-#        pred = trn_model(poses)
-#        batch_loss = loss_fun(pred, action)
-#        print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
-#        epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
-#        batch_loss.backward()
-#        optimizer.step()
-#        #gc.collect() # only needed in cpu 
-#    losses_train.append(epoch_loss_train)
-#
-#    # evaluate every epoch
-#    with torch.no_grad():
-#        eval_model.load_state_dict(trn_model.state_dict())
-#        eval_model.eval()
-#        epoch_loss_test = []
-#        targets = []
-#        for y_val, batch_2d in generator.next_validation():          
-#            poses = torch.from_numpy(batch_2d.astype('float32'))
-#            if torch.cuda.is_available():
-#                poses = poses.cuda()         
-#            pred = eval_model(poses)
-#            batch_act = np.full((1,pred.shape[-1]),y_val)
-#            action = torch.from_numpy(batch_act.astype('long'))
-#            if torch.cuda.is_available():
-#                action = action.cuda()
-#            batch_loss = loss_fun(pred, action)
-#            epoch_loss_test.append(batch_loss.detach().cpu().numpy())
-#            targets.append((batch_act,pred.detach().cpu().numpy()))
-#        losses_test.append(epoch_loss_test) 
-#        validation_targets.append(targets)  # store (target,prediction) tuple for analysis
-#
-#    print('{{"metric": "Cross Entropy Loss", "value": {}, "epoch": {}}}'.format(
-#            np.mean(epoch_loss_train), epoch)) 
-#    print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
-#            np.mean(epoch_loss_test), epoch)) 
-#
-#    # checkpoint every epoch
-#    torch.save({
-#            'epoch': epoch,
-#            'model_state_dict': trn_model.state_dict(),
-#            'optimizer_state_dict': optimizer.state_dict(),
-#            'losses_test': losses_test,
-#            'validation_targets' : validation_targets,
-#            'training_set' : vid_idx
-#            }, os.path.join(CHECKPATH,f'Recipe-2-epoch-{epoch}.pth') )
-#
-#    lr *= lr_decay
-#    for param_group in optimizer.param_groups:
-#        param_group['lr'] *= lr_decay
-#    epoch += 1
-#    generator.next_epoch()  
-#      
+   

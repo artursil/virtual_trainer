@@ -8,6 +8,7 @@ DSR portfolio project with Artur Silicki
 import os
 import sys
 import errno
+import time
 import torch
 
 import torch.nn as nn
@@ -99,16 +100,23 @@ if torch.cuda.is_available():
     trn_model = trn_model.cuda()
     eval_model = eval_model.cuda()
 
-# train model
-epoch = 0
+checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-15.pth')
+epoch = checkp['epoch']+1
 losses_train = []
-losses_test = []
-validation_targets = []
+losses_test = checkp['losses_test']
+validation_targets = checkp['validation_targets']
+trn_model.load_state_dict(checkp['model_state_dict'])
+# train model
+# epoch = 0
+# losses_train = []
+# losses_test = []
+# validation_targets = []
 
 while epoch < epochs:
     epoch_loss_train = [] 
     trn_model.train()  
     # train minibatches
+    st = time.time()
     for batch_act, batch_2d in generator.next_batch():
         #batch_act = batch_act.reshape(-1,1)
         action = torch.from_numpy(batch_act.astype('long'))
@@ -147,7 +155,7 @@ while epoch < epochs:
             targets.append((batch_act,pred.detach().cpu().numpy()))
         losses_test.append(epoch_loss_test) 
         validation_targets.append(targets)  # store (target,prediction) tuple for analysis
-
+    print(f'Time per epoch: {(time.time()-st)//60}')
     print('{{"metric": "Cross Entropy Loss", "value": {}, "epoch": {}}}'.format(
             np.mean(epoch_loss_train), epoch)) 
     print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
