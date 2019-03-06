@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from utils import *
+import torchvision.transforms as transforms
 from openpose.preprocessing import rtpose_preprocess, vgg_preprocess, crop_with_factor
 
 class VideoScraper:
@@ -222,6 +223,27 @@ class VideoScraper:
             prep_imgs = prep_imgs[::2,:,:,:]
         return prep_imgs, orig_images
 
+    @staticmethod
+    def transform_single_frame(image,resize_size,vgg=True,transform=None):
+        if vgg==True:
+            preprocess = vgg_preprocess
+        else:
+            preprocess = rtpose_preprocess
+        resize = transforms.Resize(resize_size)
+        image = np.array(resize(Image.fromarray(image)))
+        image,_,_ = crop_with_factor(image) 
+        # print(type(image))
+        if transform is None:  
+            orig_image = image            
+            image = preprocess(image)
+            
+        else:
+            image = np.array(transform(Image.fromarray(image)))
+            orig_image = image
+            image = preprocess(image)
+        # print("cropping")
+         
+        return image, orig_image
 
     @property
     def title(self):
