@@ -247,7 +247,7 @@ def save_picture(path,personwiseKeypoints,keypoints_list,frameClone):
     cv2.imwrite(path,frameClone)
 
 
-def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,filename,desc="inter"):
+def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,filename,desc="inter",path_to_save='default'):
     POSE_PAIRS = [[0,1], [1,2], [2,3], [3,4], [1,5], [5,6], [6,7], [1,14], [14,8], [8,9], [9,10], [14,11], [11,12], [12,13] ]
     columns = ['0_0', '0_1', '1_0',
            '1_1', '2_0', '2_1', '3_0', '3_1', '4_0', '4_1', '5_0', '5_1', '6_0',
@@ -262,8 +262,10 @@ def draw_interpolated(PATH,ix,frame_c,outputs_df,frame,filename,desc="inter"):
             if pointsA:
                 cv2.circle(frame, pointsA, 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
     
-    
-        cv2.imwrite(f"{PATH.replace('clipped','processed')}/{filename}_{ix}_{frame_c}_{desc}.png",frame)
+        if path_to_save=='default': 
+            cv2.imwrite(f"{PATH.replace('clipped','processed')}/{filename}_{ix}_{frame_c}_{desc}.png",frame)
+        else:
+            cv2.imwrite(f"{path_to_save}/{filename}_{ix}_{frame_c}_{desc}.png",frame)
     except ValueError:
         pass
 
