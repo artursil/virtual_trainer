@@ -9,6 +9,48 @@ import torch
 import torch.nn as nn
 from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel  
 
+class SiameseNet(nn.Module):
+    """
+    Siamese network
+    """
+    def __init__(self, class_model, pretrained_weights):
+        super().__init__()
+        class_model.load_state_dict(pretrained_weights['model_state_dict']
+        class_model.top_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+
+    def forward(self, x1, x2):
+        x1 = self.embed_model(x1)
+        x2 = self.embed_model(x2)
+        return x1, x2
+
+
+class TripletNet(nn.Module):
+    """
+    Triplet network
+    """
+    def __init__(self, class_model, pretrained_weights):
+        super().__init__()
+        class_model.load_state_dict(pretrained_weights['model_state_dict']
+        class_model.top_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+
+    def forward(self, x1, x2, x3):
+        x1 = self.embed_model(x1)
+        x2 = self.embed_model(x2)
+        x3 = self.embed_model(x3)
+        return x1, x2, x3
+
+
+class HeadlessModule(nn.Module):
+    """
+    Swap-in for last layer to make a headless model
+    """
+    def __init__(self):
+        super().__init__()
+    def forward(self,x):
+        return x
+
 class NaiveStridedModel(nn.Module):
     """
     Baseline architecture to test out: Chain temporal models of same size: 
@@ -16,11 +58,12 @@ class NaiveStridedModel(nn.Module):
     Strided version for training
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels, loadBase=True):
         super().__init__()
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
-        self.base_model.load_state_dict(pretrained_weights['model_pos'])
+        if loadBase:
+            self.base_model.load_state_dict(pretrained_weights['model_pos'])
         self.top_model = ModdedStridedModel(num_joints_out, 3, num_joints_out, filter_widths,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
@@ -38,11 +81,12 @@ class NaiveBaselineModel(nn.Module):
     Reference version for running
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels, loadBase=True):
         super().__init__()
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
-        self.base_model.load_state_dict(pretrained_weights['model_pos'])
+        if loadBase:
+            self.base_model.load_state_dict(pretrained_weights['model_pos'])
         self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
