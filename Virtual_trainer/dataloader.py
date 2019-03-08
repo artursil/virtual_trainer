@@ -5,7 +5,7 @@ DSR portfolio project with Artur Silicki
 """
 #import pdb
 import re
-
+import random
 import pandas as pd 
 import numpy as np
 
@@ -228,6 +228,7 @@ def fetch_s_keypoints(df,target,from_distribution=False):
     actions = [] 
     return_idx = []
     from_clip_flgs = []
+    ratings = []
     
     keypoints = df.loc[df['target']==target]
     
@@ -242,19 +243,21 @@ def fetch_s_keypoints(df,target,from_distribution=False):
         keypoints = keypoints.loc[keypoints['from_distribution']==True]
         
     if len(keypoints)==0:
-        raise ValueError(f'There are no samples for this target ({target}) and
-                            given from_distribution={from_distribution}')
+        raise ValueError(f'''There are no samples for this target ({target}) 
+                            and given from_distribution={from_distribution}''')
     filenames = keypoints['filename'].unique()
     for file in filenames:
         action = target
         poses_2d = keypoints.loc[keypoints['filename']==file].sort_values(by="clip_id")[joint_order]
         poses_2d = np.reshape(poses_2d.values,(-1,17,2))
         from_clip_flg = keypoints[keypoints['filename']==file]['rated'].iloc[0]
+        rating  = keypoints[keypoints['filename']==file]['rating_final'].iloc[0]
         if ~np.isnan(poses_2d).any():
             out_poses_2d.append(poses_2d)
             actions.append(action)
             from_clip_flgs.append(from_clip_flg)
             return_idx.append(file)
+            ratings.append(rating)
 
-    return actions, out_poses_2d,from_clip_flgs, return_idx
+    return actions, out_poses_2d,from_clip_flgs, return_idx, ratings
 
