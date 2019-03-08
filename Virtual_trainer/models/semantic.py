@@ -9,32 +9,36 @@ import torch
 import torch.nn as nn
 from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel  
 
-class SiameseNet(nn.Module):
+
+class HeadlessNet(nn.Module):
     """
-    Siamese network
+    Headless network
     """
     def __init__(self, class_model, pretrained_weights):
         super().__init__()
-        class_model.load_state_dict(pretrained_weights['model_state_dict']
+        class_model.load_state_dict(pretrained_weights['model_state_dict'])
         class_model.top_model.shrink = HeadlessModule()
         self.embed_model = class_model
+    def forward(self,x):
+        x = self.embed_model(x)
+        return x
 
+
+
+class SiameseNet(HeadlessNet):
+    """
+    Siamese network
+    """
     def forward(self, x1, x2):
         x1 = self.embed_model(x1)
         x2 = self.embed_model(x2)
         return x1, x2
 
 
-class TripletNet(nn.Module):
+class TripletNet(HeadlessNet):
     """
     Triplet network
     """
-    def __init__(self, class_model, pretrained_weights):
-        super().__init__()
-        class_model.load_state_dict(pretrained_weights['model_state_dict']
-        class_model.top_model.shrink = HeadlessModule()
-        self.embed_model = class_model
-
     def forward(self, x1, x2, x3):
         x1 = self.embed_model(x1)
         x2 = self.embed_model(x2)
