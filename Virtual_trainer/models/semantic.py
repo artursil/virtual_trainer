@@ -16,12 +16,14 @@ class NaiveStridedModel(nn.Module):
     Strided version for training
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels,filter_widths2=None):
         super().__init__()
+        if filter_widths2 is None:
+            filter_widths2 = filter_widths
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
         self.base_model.load_state_dict(pretrained_weights['model_pos'])
-        self.top_model = ModdedStridedModel(num_joints_out, 3, num_joints_out, filter_widths,
+        self.top_model = ModdedStridedModel(num_joints_out, 3, num_joints_out, filter_widths2,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
 
@@ -38,12 +40,14 @@ class NaiveBaselineModel(nn.Module):
     Reference version for running
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels,filter_widths2=None):
         super().__init__()
+        if filter_widths2 is None:
+            filter_widths2 = filter_widths
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
         self.base_model.load_state_dict(pretrained_weights['model_pos'])
-        self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths,
+        self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths2,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
 
@@ -81,14 +85,14 @@ class ModdedStridedModel(TemporalModelOptimized1f):
         # flatten input
         x = x.view(x.shape[0], x.shape[1], -1)
         x = x.permute(0, 2, 1)
-        
+
         x = self.drop(self.relu(self.expand_bn(self.expand_conv(x)))) 
         
         # iterate through blocks
         for i in range(len(self.pad) - 1):
             # don't take a residual if last block
             res = 0 if (i == (len(self.pad) - 2) and self.skip_res) else x[:, :, self.causal_shift[i+1] + self.filter_widths[i+1]//2 :: self.filter_widths[i+1]]
-            
+
             x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
             x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
         x = self.shrink(x) # Classifier unit
@@ -117,7 +121,6 @@ class ModdedTemporalModel(TemporalModel):
         assert len(x.shape) == 4
         assert x.shape[-2] == self.num_joints_in
         assert x.shape[-1] == self.in_features
-        
         x = x.view(x.shape[0], x.shape[1], -1)
         x = x.permute(0, 2, 1)
         
