@@ -56,11 +56,14 @@ def fetch_openpose_keypoints(keypoint_file):
     actions = []
     out_poses_2d = []
     vid_idx = keypoints['vid_nr'].unique()
-    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1','8_0','8_1','9_0','9_1',
-                   '10_0','10_1','14_0','14_1','1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1',
-                   '4_0','4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
+
+    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1',
+                    '8_0','8_1','9_0','9_1', '10_0','10_1','14_0','14_1',
+                    '1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1', '4_0',
+                    '4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
     
     for idx in vid_idx:
+                    
         action = int(keypoints.loc[keypoints['vid_nr']==idx]['target'].head(1))
         poses_2d = keypoints.loc[keypoints['vid_nr']==idx].sort_values(by="clip_id")[joint_order]
         poses_2d = np.reshape(poses_2d.values,(-1,17,2))
@@ -75,9 +78,11 @@ def fetch_keypoints(keypoints):
     actions = []
     out_poses_2d = []
     vid_idx = keypoints['vid_nr'].unique()
-    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1','8_0','8_1','9_0','9_1',
-                   '10_0','10_1','14_0','14_1','1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1',
-                   '4_0','4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
+
+    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1',
+                    '8_0','8_1','9_0','9_1', '10_0','10_1','14_0','14_1',
+                    '1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1', '4_0',
+                    '4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
     
     for idx in vid_idx:
         action = int(keypoints.loc[keypoints['vid_nr']==idx]['target'].head(1))
@@ -137,7 +142,8 @@ def get_rating(df,ratings):
     :param df: DataFrame with keypoints
     :param ratings: DataFrame with sample of manually assigned ratings
     """
-    df['video_name'] = ["_".join(x.split('_')[:-1]).replace('-','_') for x in keypoints_all['filename']]   
+    df['video_name'] = ["_".join(x.split('_')[:-1]).replace('-','_') for x in
+            df['filename']]   
     ratings = ratings.iloc[:,-2:]
     ratings.columns = ['filename','rating']
     ratings['rating'] = [random.randint(0,9) for x in range(len(ratings))]
@@ -198,7 +204,7 @@ def fetch_s_df(keypoints_csv,keypoints_rest_csv,ratings_csv,seed):
     :seed: seed used in sample_rating
     """
     keypoints = pd.read_csv(keypoints_csv)
-    keypoints_rest = pd.read_csv(keypoins_rest_csv)
+    keypoints_rest = pd.read_csv(keypoints_rest_csv)
     keypoints_all = keypoints.append(keypoints_rest).reset_index(drop=True)
     ratings = pd.read_csv(ratings_csv)
         
@@ -225,9 +231,10 @@ def fetch_s_keypoints(df,target,from_distribution=False):
     
     keypoints = df.loc[df['target']==target]
     
-    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1','8_0','8_1','9_0','9_1',
-                   '10_0','10_1','14_0','14_1','1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1',
-                   '4_0','4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
+    joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1',
+                    '8_0','8_1','9_0','9_1', '10_0','10_1','14_0','14_1',
+                    '1_0','1_1','15_0','15_1','0_0','0_1','2_0','2_1', '4_0',
+                    '4_1','3_0','3_1','5_0','5_1','7_0','7_1','6_0','6_1']
     
     if from_distribution==False:
         keypoints = keypoints.loc[keypoints['from_distribution']!=True]
@@ -235,7 +242,8 @@ def fetch_s_keypoints(df,target,from_distribution=False):
         keypoints = keypoints.loc[keypoints['from_distribution']==True]
         
     if len(keypoints)==0:
-        raise ValueError(f'There are no samples for this target ({target}) and given from_distribution={from_distribution}')
+        raise ValueError(f'There are no samples for this target ({target}) and
+                            given from_distribution={from_distribution}')
     filenames = keypoints['filename'].unique()
     for file in filenames:
         action = target
