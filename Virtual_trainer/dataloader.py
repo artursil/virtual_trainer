@@ -3,7 +3,6 @@
 Data loaders for Virtual Trainer portfolio project.
 DSR portfolio project with Artur Silicki
 """
-#import pdb
 import re
 import random
 import pandas as pd 
@@ -144,9 +143,9 @@ def get_rating(df,ratings):
     """
     df['video_name'] = ["_".join(x.split('_')[:-1]).replace('-','_') for x in
             df['filename']]   
-    ratings = ratings.iloc[:,-2:]
+    ratings = ratings.iloc[:,1:3]
     ratings.columns = ['filename','rating']
-    ratings['rating'] = [random.randint(0,9) for x in range(len(ratings))]
+    ratings['rating'] =ratings['rating'] - 1 # Rated from 1-10 but 0-9 needed
     ratings['video_name'] = ["_".join(x.split('_')[:-1]).replace('-','_') for x in ratings['filename']]
     ratings_gb = ratings.groupby('video_name')['rating'].mean().reset_index()
     ratings_gb['rating_avg'] = np.floor(ratings_gb['rating'])
