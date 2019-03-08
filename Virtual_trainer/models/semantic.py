@@ -16,7 +16,7 @@ class HeadlessNet(nn.Module):
     """
     def __init__(self, class_model, pretrained_weights):
         super().__init__()
-        class_model.load_state_dict(pretrained_weights['model_state_dict']
+        class_model.load_state_dict(pretrained_weights['model_state_dict'])
         class_model.top_model.shrink = HeadlessModule()
         self.embed_model = class_model
     def forward(self,x):
