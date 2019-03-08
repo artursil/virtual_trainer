@@ -19,6 +19,7 @@ from models.semantic import NaiveStridedModel, HeadlessNet
 from models.loss import ContrastiveLoss
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
+from siamese_generator import SiameseGenerator
 
 try:
     # Create checkpoint directory if it does not exist
@@ -30,41 +31,6 @@ CHECKPATH = 'checkpoint'
 
 # Data mountpoint
 DATAPOINT = "Data"
-
-# --- params ---
-pretrained = os.path(CHECKPATH,"filename") # pretrained base
-kpfile_1 = os.path(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
-kpfile_2 = os.path(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
-rating_file = os.path(DATAPOINT,"clips-rated.csv") # rating labels file
-selected_class = 0 # Squat
-loss_margin = 0.5
-rate_range = 3
-seed = 1234
-lr, lr_decay = 0.001 , 0.95 
-split_ratio = 0.2
-epochs = 20
-batch_size = 32
-
-# initialise everything
-actions, out_poses_2d,from_clip_flgs, return_idx = load_keypoints(kpfile_1,kpfile_2,
-                                                                    rating_file,seed,selected_class)
-generator = SiameseGenerator() # todo
-model = load_headless_model(pretrained)
-loss_fun = ContrastiveLoss(rate_range,loss_margin)
-optimizer = optim.Adam(list(model.top_model.parameters()),lr, amsgrad=True)
-losses_train = []
-losses_test = []
-
-# run training
-for epoch in range(1,epochs+1):
-    st = time.time()
-    epoch_loss_train = train_epoch()
-    epoch_loss_test = evaluate_epoch()
-    log_results(epoch, st, epoch_loss_train, epoch_loss_test)
-    lr *= lr_decay
-    for param_group in optimizer.param_groups:
-        param_group['lr'] *= lr_decay
-    generator.next_epoch()  
 
 def train_epoch():
     epoch_loss_train = [] 
@@ -143,6 +109,46 @@ def load_headless_model(chk_filename):
     return HeadlessNet(model, pretrained_weights)
 
 
+# --- params ---
+pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-15.pth") # pretrained base
+kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
+kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
+rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
+selected_class = 0 # Squat
+loss_margin = 0.5
+rate_range = 3
+seed = 1234
+lr, lr_decay = 0.001 , 0.95 
+split_ratio = 0.2
+epochs = 20
+batch_size = 32
+n_chunks = 8
 
+model = load_headless_model(pretrained)
+#model.cuda()
+receptive_field = model.embed_model.base_model.receptive_field()
+pad = (receptive_field - 1) 
+causal_shift = pad
 
+# initialise everything
+actions, out_poses_2d,from_clip_flgs, return_idx, ratings = load_keypoints(kpfile_1,kpfile_2,
+                                                                    rating_file,seed,selected_class)
+from siamese_generator import SiameseGenerator
+generator = SiameseGenerator(batch_size, actions, out_poses_2d,ratings,from_clip_flgs, pad=pad,
+                 causal_shift=causal_shift, test_split=split_ratio,n_chunks=n_chunks, random_seed=seed) # todo
 
+loss_fun = ContrastiveLoss(rate_range,loss_margin)
+optimizer = optim.Adam(list(model.embed_model.top_model.parameters()),lr, amsgrad=True)
+losses_train = []
+losses_test = []
+
+# run training
+for epoch in range(1,epochs+1):
+    st = time.time()
+    epoch_loss_train = train_epoch()
+    epoch_loss_test = evaluate_epoch()
+    log_results(epoch, st, epoch_loss_train, epoch_loss_test)
+    lr *= lr_decay
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= lr_decay
+    generator.next_epoch()  

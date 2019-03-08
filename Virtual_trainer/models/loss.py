@@ -57,4 +57,4 @@ class ContrastiveLoss(nn.MarginRankingLoss):
     def forward(self, x1, x2, difs):
         scaled_dif = difs / self.dif_range
         dists = F.pairwise_distance(x1,x2) / self.dif_range
-        return ( (1 - scaled_dif) * dists**2 + scaled_dif * torch.max(torch.zeros(1),(difs*self.margin - dists))**2 ) / 2
+        return torch.mean((torch.mul((1 - scaled_dif), dists.pow(2))  + torch.mul(scaled_dif, F.relu(torch.mul(difs,self.margin) - dists)).pow(2) ) / 2)
