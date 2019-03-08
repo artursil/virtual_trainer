@@ -43,3 +43,18 @@ class OnlineTriplet(nn.TripletMarginLoss):
         anc, pos, neg = select_triplets(embeddings,classes,self.margin)
         return F.triplet_margin_loss(embeddings[anc], embeddings[pos], embeddings[neg], margin=self.margin, p=self.p,
                                     eps=self.eps, swap=self.swap, reduction=self.reduction)
+
+
+
+class ContrastiveLoss(nn.MarginRankingLoss):
+    # modified contrastive loss function that scales loss by range of rankings
+
+    def __init__(self, dif_range, margin=0., size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+        self.dif_range = dif_range
+
+    def forward(self, x1, x2, difs):
+        scaled_dif = difs / self.dif_range
+        dists = F.pairwise_distance(x1,x2) / self.dif_range
+        return ( (1 - scaled_dif) * dists**2 + scaled_dif * torch.max(torch.zeros(1),(difs*self.margin - dists))**2 ) / 2
