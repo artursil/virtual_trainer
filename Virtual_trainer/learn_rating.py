@@ -88,7 +88,7 @@ def train_epoch():
         #gc.collect() # only needed in cpu    
 return epoch_loss_train
 
-def evaluate_epoch()
+def evaluate_epoch():
     with torch.no_grad():
         model.eval()
         epoch_loss_test = []
