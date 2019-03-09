@@ -53,8 +53,16 @@ class ContrastiveLoss(nn.MarginRankingLoss):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
         self.dif_range = dif_range
+        self.loss_tuples = []
 
     def forward(self, x1, x2, difs):
         scaled_dif = difs / self.dif_range
         dists = F.pairwise_distance(x1,x2) / self.dif_range
-        return torch.mean((torch.mul((1 - scaled_dif), dists.pow(2))  + torch.mul(scaled_dif, F.relu(torch.mul(difs,self.margin) - dists)).pow(2) ) / 2)
+        good_form = torch.mul((1 - scaled_dif), dists.pow(2))
+        bad_form = torch.mul(scaled_dif, F.relu(torch.mul(difs,self.margin) - dists)).pow(2)
+        losses = (good_form  + bad_form ) / 2
+        self.loss_tuples.append( zip(losses.detach().cpu().numpy() , difs.detach().cpu().numpy()))
+        return torch.mean(losses)
+
+    def get_tuples(self):
+        return self.loss_tuples
