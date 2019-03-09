@@ -75,6 +75,21 @@ class SiameseGenerator:
         val_chunks = list(range(start_val,start_val+val_size))
         
         return val_chunks
+    
+    def __get_sets(self):
+        """
+        Prepare sets that are then used for creating chunks.
+        Save all combinations to self.combinations variable.
+        Should be run only once.
+        """
+        self.poses_nines,self.ratings_nines= self.__get_nines()
+        poses_oth,self.ratings_oth = self.__get_others()
+        self.poses = self.poses_nines + poses_oth
+        self.ratings_oth = np.concatenate([self.ratings_nines,self.ratings_oth])
+        self.combinations = self.__create_all_combinations(len(self.ratings_nines),
+                                                      len(self.ratings_oth))
+        return self
+        
         
         
     def next_epoch(self):
@@ -83,41 +98,41 @@ class SiameseGenerator:
         self.epoch+=1
 
     def build_chunks(self):
-        
-        poses_nines,ratings_nines= self.__get_nines()
-        poses_oth,ratings_oth = self.__get_others()
-        poses_oth = poses_nines + poses_oth
-        self.poses = poses_oth
-        ratings_oth = np.concatenate([ratings_nines,ratings_oth])
-        
-        combinations = self.__create_all_combinations(len(ratings_nines),
-                                                      len(ratings_oth))
-        self.combinations = combinations # to delete
+        """
+        Creates chunks both for training and validation.
+        For validation chunks are created only once.
+        Chunks from beginning and end of a clip are used for training,
+        chunks from the middle are used for validation.
+        """
+        if self.epoch==0:
+            self.__get_sets() # we want to create thoe datasets once       
+
         val_chunks = self.__validation_chunks()
         
         chunk_db = []
         chunk_val = []
-        for id_a, id_b in combinations:
-            if len(poses_nines[id_a])<=100 or len(poses_oth[id_b])<=100:
+        for id_a, id_b in self.combinations:
+            # There is no padding for videos so there is need to filter them by length.
+            if len(self.poses_nines[id_a])<=100 or len(self.poses[id_b])<=100:
                 continue
-            clips_len= [len(poses_nines[id_a])-self.receptive_field,len(poses_oth[id_b])-self.receptive_field]
-            big_clip = np.argmax(clips_len)
+            clips_len= [len(self.poses_nines[id_a])-self.receptive_field,len(self.poses[id_b])-self.receptive_field]
+            big_clip = np.argmax(clips_len) # Choose longer clip
             sm_clip = np.argmin(clips_len)
-            clips_diff = np.abs(clips_len[0]-clips_len[1])//2
+            clips_diff = np.abs(clips_len[0]-clips_len[1])//2 #Determine how many frames should be added to to longer video
+            # This way we are cropping longer video to the size of shorter one by not including first and last frames of length clips_diff
 
             self.n_frames = clips_len[sm_clip] // self.n_chunks # number of frames per chunk
             n_frames = self.n_frames
             random.seed(self.seed)
-            # import pdb; pdb.set_trace()
-            rand_a = [random.randint(0,self.n_frames) for ch in range(self.n_chunks)]
+            rand_a = [random.randint(0,self.n_frames) for ch in range(self.n_chunks)] #Random shift of frames in each chunk
             rand_b = [random.randint(0,self.n_frames) for ch in range(self.n_chunks)]
             
-            rating_a = ratings_nines[id_a]
-            rating_b = ratings_oth[id_b]
+            rating_a = self.ratings_nines[id_a]
+            rating_b = self.ratings_oth[id_b]
             
             for ch in range(self.n_chunks):
                 if ch in val_chunks:
-                    if self.epoch==1: # created only once
+                    if self.epoch==0: # created only once
                         if big_clip==0:
                             chunk = (id_a,id_b,ch*n_frames+(n_frames//2)+clips_diff,
                                      ch*n_frames+(n_frames//2),rating_a,rating_b)
@@ -129,7 +144,6 @@ class SiameseGenerator:
                         
                 else:                    
                     if big_clip==0:
-#                        import pdb; pdb.set_trace()
                         chunk = (id_a,id_b,ch*n_frames+rand_a[ch]+clips_diff,
                                  ch*n_frames+rand_b[ch],rating_a,rating_b)
                     else:
@@ -139,7 +153,7 @@ class SiameseGenerator:
                         
                     chunk_db.append(chunk)
         self.chunk_db = self.random.permutation(chunk_db)
-        if self.epoch==1:
+        if self.epoch==0:
             self.chunk_val = chunk_val
         self.num_batches = int(len(chunk_db)//self.batch_len)+1                    
             
@@ -168,7 +182,6 @@ class SiameseGenerator:
                 x2_ind = int(x2_ind)
                 idx_1_fin = x1_ind + self.receptive_field               
                 idx_2_fin = x2_ind + self.receptive_field
-                # import pdb;pdb.set_trace()
                 self.batch_X1[i,:,:,:] = self.poses[int(clip_id_a)][x1_ind:idx_1_fin,:,:]
                 self.batch_X2[i,:,:,:] = self.poses[int(clip_id_b)][x2_ind:idx_2_fin,:,:]
                 self.batch_y[i,:] = y1-y2
@@ -178,7 +191,7 @@ class SiameseGenerator:
     def next_validation(self):
         this_batch=0
         b_ix=0
-        num_val_batches = int(len(self.chunk_val)//self.batch_len)+1  
+        num_val_batches = int(len(self.chunk_val)//self.batch_len)+1
         for b_ix in range(num_val_batches):
 
             this_batch = min(len(self.chunk_val) - b_ix * self.batch_len,
@@ -199,7 +212,7 @@ class SiameseGenerator:
                 x2_ind = int(x2_ind)
                 idx_1_fin = x1_ind + self.receptive_field               
                 idx_2_fin = x2_ind + self.receptive_field
-#                import pdb;pdb.set_trace()
+
                 self.val_X1[i,:,:,:] = self.poses[int(clip_id_a)][x1_ind:idx_1_fin,:,:]
                 self.val_X2[i,:,:,:] = self.poses[int(clip_id_b)][x2_ind:idx_2_fin,:,:]
                 self.val_y[i,:] = y1-y2

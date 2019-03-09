@@ -37,7 +37,8 @@ def train_epoch():
     model.train()  
     # train minibatches
     for X1, X2, diffs in generator.next_batch():
-
+        if X1.shape[0]==0 or X2.shape[0]==0:
+            continue
         diffs = torch.from_numpy(diffs.astype('float32'))
         X1 = torch.from_numpy(X1.astype('float32'))
         X2 = torch.from_numpy(X2.astype('float32'))
@@ -59,7 +60,9 @@ def evaluate_epoch():
     with torch.no_grad():
         model.eval()
         epoch_loss_test = []
-        for X1, X2, diffs in generator.next_validation():          
+        for X1, X2, diffs in generator.next_validation():
+            if X1.shape[0]==0 or X2.shape[0]==0:
+                continue
             diffs = torch.from_numpy(diffs.astype('float32'))
             X1 = torch.from_numpy(X1.astype('float32'))
             X2 = torch.from_numpy(X2.astype('float32'))
@@ -72,7 +75,7 @@ def evaluate_epoch():
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())     
     return epoch_loss_test 
 
-def log_results(epoch, st, epoch_loss_train, epoch_loss_test):  
+def log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple):  
     losses_train.append(epoch_loss_train)
     losses_test.append(epoch_loss_test)
     print(f'Time per epoch: {(time.time()-st)//60}')
@@ -84,8 +87,9 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test):
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'losses_test': losses_test
-            }, os.path.join(CHECKPATH,f'siamese-1-{epoch}.pth') )
+            'losses_test': losses_test,
+            'loss_tuple': loss_tuple
+            }, os.path.join(CHECKPATH,f'siamese-1-{selected_class}-{epoch}.pth') )
 
 
 
@@ -114,7 +118,8 @@ pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-15.pth") # pretrained base
 kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
 kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
 rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
-selected_class = 0 # Squat
+# selected_class = 0 # Squat
+selected_class = 1 # Deadlift
 loss_margin = 0.5
 rate_range = 3
 seed = 1234
@@ -125,7 +130,7 @@ batch_size = 32
 n_chunks = 8
 
 model = load_headless_model(pretrained)
-#model.cuda()
+model.cuda()
 receptive_field = model.embed_model.base_model.receptive_field()
 pad = (receptive_field - 1) 
 causal_shift = pad
@@ -147,7 +152,8 @@ for epoch in range(1,epochs+1):
     st = time.time()
     epoch_loss_train = train_epoch()
     epoch_loss_test = evaluate_epoch()
-    log_results(epoch, st, epoch_loss_train, epoch_loss_test)
+    loss_tuple = loss_fun.get_tuples()
+    log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple)
     lr *= lr_decay
     for param_group in optimizer.param_groups:
         param_group['lr'] *= lr_decay
