@@ -61,7 +61,7 @@ class ContrastiveLoss(nn.MarginRankingLoss):
         good_form = torch.mul((1 - scaled_dif), dists.pow(2))
         bad_form = torch.mul(scaled_dif, F.relu(torch.mul(difs,self.margin) - dists)).pow(2)
         losses = (good_form  + bad_form ) / 2
-        self.loss_tuples.append( list(zip(losses.detach().cpu().numpy() , difs.detach().cpu().numpy())) )
+        self.loss_tuples.append( list(zip(dists.detach().cpu().numpy() , difs.detach().cpu().numpy())) )
         return torch.mean(losses)
 
     def get_tuples(self):
