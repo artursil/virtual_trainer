@@ -99,8 +99,31 @@ class NaiveBaselineModel(nn.Module):
         x = self.base_model(x)
         x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
         x = self.top_model(x)
-        return x        
+        return x     
 
+class BaselineWithkeypoints(nn.Module):
+    """
+    Baseline architecture to test out: Chain temporal models of same size: 
+    (2d keypoints)--> [VP3D] >--(3d kypoints)--> [ModdedModel] >--(classes)
+    Reference version for running
+    """
+    def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels, loadBase=True):
+        super().__init__()
+        self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
+                            causal=causal, dropout=dropout, channels=channels)
+        if loadBase:
+            self.base_model.load_state_dict(pretrained_weights['model_pos'])
+        self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths,
+                                        causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
+        self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
+
+    def forward(self, x):
+        x = self.base_model(x)
+        keypoints = x.detach().cpu().numpy() 
+        x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
+        x = self.top_model(x)
+        return x, keypoints        
 
 class ModdedStridedModel(TemporalModelOptimized1f):
     """
