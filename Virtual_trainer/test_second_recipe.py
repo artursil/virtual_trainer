@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
-from models.semantic import NaiveBaselineModel, NaiveStridedModel
+from models.semantic import BaselineWithkeypoints
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
 
@@ -74,7 +74,7 @@ poses_test = poses_test + poses_op_test
 # build models
 classes = len(np.unique(actions))
 pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
-eval_model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
+eval_model = BaselineWithkeypoints(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
                                 causal=True, dropout=0.25, channels=channels)
 
 
@@ -89,6 +89,7 @@ epoch = 0
 losses_train = []
 losses_test = []
 validation_targets = []
+vp3d_keypoints = []
 
 # checkp = torch.load('/home/artursil/Documents/vt2/recipe1/checkpoint/model4-19.pth')
 checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-19.pth')
@@ -112,7 +113,7 @@ with torch.no_grad():
 #        poses = np.concatenate(poses)
         poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
         poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
-        pred = eval_model(poses)
+        pred, seq_keypoints = eval_model(poses)
         actions = actions_test[ix]
         orig_action = actions
         if actions>7:
@@ -135,11 +136,13 @@ with torch.no_grad():
         values, counts = np.unique(preds,return_counts=True)
         ind = np.argmax(counts)
         accuracy_test.append((orig_action,np.sum(values[ind]==actions)))
+        vp3d_keypoints.append(seq_keypoints)
     print(np.mean([x[1] for x in accuracy_test]))
             
 torch.save({
         'losses_test': test_losses,
         'test_targets' : targets,
         'accuracy' : accuracy_test,
+        '3d_keypoints' : vp3d_keypoints
         }, os.path.join(CHECKPATH,f'Recipe-2-test-results.pth') )
    
