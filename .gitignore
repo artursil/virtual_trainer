@@ -32,6 +32,7 @@ tags
 outputs*
 # C extensions
 *.so
+txt_files/
 
 # Distribution / packaging
 .Python
