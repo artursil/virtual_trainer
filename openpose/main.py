@@ -49,7 +49,7 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,pat
             X,orig_images_full, y, filename = batch
             filename= filename[0]
 
-            X_full = X.squeeze(0).to(DEVICE)
+            X_full = X.squeeze(0)
             y = y.to(DEVICE).detach().cpu().numpy()
             bs = X_full.shape[0]
             batch_size = 30
@@ -65,6 +65,8 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,pat
 
                 if X.shape[0]==0:
                     continue
+
+                X = X.to(DEVICE)
                 predicted_outputs, _ = model(X)
         
                 output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
