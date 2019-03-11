@@ -38,6 +38,7 @@ subjects = ['S1','S5','S6','S7','S8']
 instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 ucf_file_test = os.path.join(DATAPOINT,'Keypoints','keypoints_rest_test.csv')
+insta_test_file = os.path.join(DATAPOINT,'Keypoints','keypoints_insta_test2.csv')
 # --- Parameters ---
 batch_size = 1024
 epochs = 20
@@ -57,6 +58,8 @@ in_joints, in_dims, out_joints = 17, 2, 17
 action_op, poses_op, vid_idx = fetch_openpose_keypoints(instagram_file)
 action_op2, poses_op2, vid_idx2 = fetch_openpose_keypoints(ucf_file)
 action_op_test, poses_op_test, vid_idx_test = fetch_openpose_keypoints(ucf_file_test)
+actions_op_itest, poses_op_itest, vid_idx_itest = fetch_openpose_keypoints(insta_test_file)
+
 actions = action_op + action_op2
 actions = [action if action!=8 else 6 for action in actions]
 poses = poses_op + poses_op2
@@ -67,8 +70,40 @@ seed = 1234
 balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
 actions_test = [actions[x] for x in test_ids]
 poses_test = [poses[x] for x in test_ids]
-actions_test = actions_test + action_op_test
-poses_test = poses_test + poses_op_test
+#actions_test = actions_test + action_op_test + actions_op_itest
+#poses_test = poses_test + poses_op_test + poses_op_itest
+actions_test = actions_op_itest
+poses_test = poses_op_itestactions_op_itest, poses_op_itest, vid_idx_itest = fetch_openpose_keypoints(insta_test_file)
+# --- Parameters ---
+batch_size = 1024
+epochs = 20
+embedding_len = 128
+lr, lr_decay = 0.001 , 0.95 
+split_ratio = 0.2
+
+# --- H36M pretrained model settings ---
+# checkpoint file
+chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
+# model architecture
+filter_widths = [3,3,3]
+channels = 1024
+in_joints, in_dims, out_joints = 17, 2, 17
+
+actions = action_op + action_op2
+actions = [action if action!=8 else 6 for action in actions]
+poses = poses_op + poses_op2
+vid_idx = vid_idx + vid_idx2
+
+# balance the dataset
+seed = 1234
+balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
+actions_test = [actions[x] for x in test_ids][:200]
+poses_test = [poses[x] for x in test_ids][:200]
+actions_test = actions_test + action_op_test + actions_op_itest
+poses_test = poses_test + poses_op_test + poses_op_itest
+# actions_test = actions_op_itest
+# poses_test = poses_op_itest
+
 
 
 # build models
