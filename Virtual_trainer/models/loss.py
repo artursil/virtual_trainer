@@ -18,17 +18,16 @@ def dist_mat(embeddings):
 class ContrastiveLoss(nn.MarginRankingLoss):
     # modified contrastive loss function that scales loss by range of rankings
 
-    def __init__(self, dif_range, margin=0., size_average=None, reduce=None, reduction='mean'):
+    def __init__(self, margin=0., size_average=None, reduce=None, reduction='mean'):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
-        self.dif_range = dif_range
         self.loss_tuples = []
 
     def forward(self, x1, x2, difs):
-        scaled_dif = difs / self.dif_range
-        dists = F.pairwise_distance(x1,x2) / self.dif_range
-        good_form = torch.mul((1 - scaled_dif), dists.pow(2))
-        bad_form = torch.mul(scaled_dif, F.relu(torch.mul(difs,self.margin) - dists)).pow(2)
+        mx_dif = torch.max(difs)
+        dists = F.pairwise_distance(x1,x2) - difs
+        good_form = torch.mul((mx_dif - difs)/mx_dif, dists.pow(2))
+        bad_form = torch.mul(difs/mx_dif, F.relu(torch.mul(dists-self.margin)).pow(2))
         losses = (good_form  + bad_form ) / 2
         self.loss_tuples.append( list(zip(dists.detach().cpu().numpy() , difs.detach().cpu().numpy())) )
         return torch.mean(losses)
