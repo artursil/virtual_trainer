@@ -215,7 +215,7 @@ def fetch_s_df(keypoints_csv,keypoints_rest_csv,ratings_csv,seed):
     return keypoints
     
     
-def fetch_s_keypoints(df,target,from_distribution=False):
+def fetch_s_keypoints(df,target=None,from_distribution=False):
     """fetch_s_keypoints
             Given target and DataFrame with keypoints return tuple for dataloader.
 
@@ -229,7 +229,10 @@ def fetch_s_keypoints(df,target,from_distribution=False):
     from_clip_flgs = []
     ratings = []
     
-    keypoints = df.loc[df['target']==target]
+    if target!=None:
+        keypoints = df.loc[df['target']==target]
+    else:
+        keypoints = df
     
     joint_order = ['16_0','16_1','11_0','11_1','12_0','12_1','13_0','13_1',
                     '8_0','8_1','9_0','9_1', '10_0','10_1','14_0','14_1',
@@ -245,18 +248,23 @@ def fetch_s_keypoints(df,target,from_distribution=False):
         raise ValueError(f'''There are no samples for this target ({target}) 
                             and given from_distribution={from_distribution}''')
     filenames = keypoints['filename'].unique()
+    filenames_final = []
+    targets = []
     for file in filenames:
         action = target
         poses_2d = keypoints.loc[keypoints['filename']==file].sort_values(by="clip_id")[joint_order]
         poses_2d = np.reshape(poses_2d.values,(-1,17,2))
         from_clip_flg = keypoints[keypoints['filename']==file]['rated'].iloc[0]
         rating  = keypoints[keypoints['filename']==file]['rating_final'].iloc[0]
+        target  = keypoints[keypoints['filename']==file]['target'].iloc[0]
         if ~np.isnan(poses_2d).any():
             out_poses_2d.append(poses_2d)
             actions.append(action)
             from_clip_flgs.append(from_clip_flg)
             return_idx.append(file)
             ratings.append(rating)
+            filenames_final.append(file)
+            targets.append(target)
 
-    return actions, out_poses_2d,from_clip_flgs, return_idx, ratings
+    return actions, out_poses_2d,from_clip_flgs, return_idx, ratings, filenames_final, targets
 
