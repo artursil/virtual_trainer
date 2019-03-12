@@ -27,7 +27,7 @@ class ContrastiveLoss(nn.MarginRankingLoss):
         mx_dif = torch.max(difs)
         dists = F.pairwise_distance(x1,x2) - difs
         good_form = torch.mul((mx_dif - difs)/mx_dif, dists.pow(2))
-        bad_form = torch.mul(difs/mx_dif, F.relu(torch.mul(dists-self.margin)).pow(2))
+        bad_form = torch.mul(difs/mx_dif, F.relu(dists-self.margin).pow(2))
         losses = (good_form  + bad_form ) / 2
         self.loss_tuples.append( list(zip(dists.detach().cpu().numpy() , difs.detach().cpu().numpy())) )
         return torch.mean(losses)
@@ -43,7 +43,7 @@ class CustomRankingLoss(nn.MarginRankingLoss):
     def __init__(self, margin=0., size_average=None, reduce=None, reduction='mean'):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
-        self.pairings = torch.empty((0))
+        self.pairings = []
 
     def forward(self, embeddings, classes, rankings):
         distances = torch.empty((0))
@@ -65,7 +65,7 @@ class CustomRankingLoss(nn.MarginRankingLoss):
                 pairings = torch.cat( (pairings, torch.tensor([ex_mask[positive],ex_mask[hard_neg[1]]])) , dim=0)
                 distances = torch.cat( (distances, torch.tensor([hard_neg[0]])), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))
-        self.pairings = pairings
+        self.pairings = pairings.detach().cpu().numpy()
         return loss
 
     def get_pairings(self):
