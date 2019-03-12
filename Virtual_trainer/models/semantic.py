@@ -101,7 +101,7 @@ class StandardiseKeypoints(nn.Module):
 
 class HeadlessNet(nn.Module):
     """
-    Headless network
+    Headless network - legacy. Do not use
     """
     def __init__(self, class_model, pretrained_weights):
         super().__init__()
@@ -112,9 +112,35 @@ class HeadlessNet(nn.Module):
         x = self.embed_model(x)
         return x
 
+class HeadlessNet2(nn.Module):
+    """
+    Headless network
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        class_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+    def forward(self,x):
+        x = self.embed_model(x)
+        return x
 
+class RankingEmbedder(nn.Module):
+    def __init__(self,input_embed,embed_lens):
+        super().__init__()
+        modules = []
+        for i,layer in enumerate(embed_lens):
+            modules.append(nn.Linear(input_embed,layer))
+            input_embed = layer
+            if i != len(embed_lens) - 1:
+                modules.append(nn.ReLU())
+        self.modules = nn.ModuleList(modules)
+    def forward(self,x):
+        for module in self.modules:
+            x = module(x)
+        return x
+        
 
-class SiameseNet(HeadlessNet):
+class SiameseNet(HeadlessNet2):
     """
     Siamese network
     """
@@ -124,7 +150,7 @@ class SiameseNet(HeadlessNet):
         return x1, x2
 
 
-class TripletNet(HeadlessNet):
+class TripletNet(HeadlessNet2):
     """
     Triplet network
     """
