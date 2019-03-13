@@ -17,7 +17,7 @@ import torch.optim as optim
 import numpy as np
 
 from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
-from models.semantic import ModdedBaselineModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, RankingEmbedder
+from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, RankingEmbedder
 from models.loss import CustomRankingLoss
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
@@ -42,6 +42,7 @@ in_joints, in_dims, out_joints = 17, 2, 17
 causal = True
 embedding_len = 128
 embeds=[64,64]
+classes=8
 
 # --- params ---
 pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-15.pth") # pretrained base
@@ -53,10 +54,10 @@ seed = 1234
 lr, lr_decay = 0.001 , 0.95 
 split_ratio = 0.2
 epochs = 20
-batch_size = 256
+batch_size = 512
 n_chunks = 8
 
-model, eval_model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds)
+model, eval_model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds,classes)
 
 receptive_field = model.base.receptive_field()
 pad = (receptive_field - 1) 
@@ -170,12 +171,15 @@ def load_model_weights(chk_filename,base,top):
     top.load_state_dict(top_weights, strict=False)
     return base, top
 
-def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds):
+def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds,classes):
 
     base= TemporalModelOptimized1f(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
     top= ModdedStridedModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
     base_eval= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
-    top_eval= ModdedBaselineModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
+    top_eval= ModdedTemporalModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
+    top.shrink= nn.Conv1d( embedding_len, classes, 1)
+    top_eval.shrink = nn.Conv1d( embedding_len, classes, 1)
+
 
     base, top = load_model_weights(chk_filename,base,top)
     model = nn.Sequential(OrderedDict([
