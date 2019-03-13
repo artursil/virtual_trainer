@@ -74,7 +74,16 @@ def rotate_seq(seq, vects):
         seq[i] = qrot(q_, seq[i] )
     return seq
 
-
+class SplitModel(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        self.class_model = class_model
+    def forward(self,x):
+        pred = self.class_model(x)
+        return x, pred
 
 class StandardiseKeypoints(nn.Module):
     """

@@ -100,6 +100,8 @@ class CombinedLoss(CustomRankingLoss):
         self.supress_cl = supress_cl
 
     def forward(self, embeddings, preds, classes, rankings):
+        weighting = self.weighting
+
         # take classification loss
         classloss = self.cl_loss(preds,classes)
         
@@ -115,7 +117,9 @@ class CombinedLoss(CustomRankingLoss):
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
 
         # scale by weighting
-        loss = torch.mul(rankloss, self.weighting) + torch.mul(classloss, (1 - self.weighting)) 
+        if torch.cuda.is_available():
+            weighting = weighting.cuda()
+        loss = torch.mul(rankloss, (1-weighting)) + torch.mul(classloss, weighting) 
 
         return loss
     
