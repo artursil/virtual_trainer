@@ -133,9 +133,10 @@ class RankingEmbedder(nn.Module):
             input_embed = layer
             if i != len(embed_lens) - 1:
                 modules.append(nn.ReLU())
-        self.modules = nn.ModuleList(modules)
-    def forward(self,x):
-        for module in self.modules:
+        self.linears = nn.ModuleList(modules)
+    def forward(self,x):        
+        x.squeeze_(2)
+        for module in self.linears:
             x = module(x)
         return x
         

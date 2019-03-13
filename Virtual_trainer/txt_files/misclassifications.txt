@@ -1,0 +1,176 @@
+0
+452_alex-fogacci-on-instagram-client-pb-trevor-managed.mp4
+Predicted class: 5
+Actual class: 3
+453_gokhan-dinc-on-instagram-chin-up-6set-6tekrar-5set.mp4
+Predicted class: 0
+Actual class: 3
+454_movement-mealprep-mindset-on-instagram-show-up-for.mp4
+Predicted class: 0
+Actual class: 3
+429_paris-williams-on-instagram-10-pull-ups.mp4
+Predicted class: 5
+Actual class: 3
+440_rakel-gunnlaugsdottir-on-instagram-my-super-focuse.mp4
+Predicted class: 5
+Actual class: 3
+102_orthodox-crossfit-workout-on-instagram-segodnia-pi.mp4
+Predicted class: 1
+Actual class: 2
+106_carrie-tollison-on-instagram-tricep-pushups-are-a-.mp4
+Predicted class: 7
+Actual class: 2
+107_richard-alexander-trithardt-on-instagram-day-905-6.mp4
+Predicted class: 5
+Actual class: 2
+109_ayoub-badaoui-on-instagram-homeworkout-noequipment.mp4
+Predicted class: 7
+Actual class: 2
+115_bryant-andrews-on-instagram-heavyweights-gymrat-pu.mp4
+Predicted class: 1
+Actual class: 2
+120_health-fitness-goals-on-instagram-day-63-i-smashed.mp4
+Predicted class: 5
+Actual class: 2
+122_richard-alexander-trithardt-on-instagram-day-904-6.mp4
+Predicted class: 5
+Actual class: 2
+125_day-dreamer-on-instagram-30-target-50-but-wrong-fo.mp4
+Predicted class: 3
+Actual class: 2
+129_lyprincce-richardson-on-instagram-the-king-gave-th.mp4
+Predicted class: 5
+Actual class: 2
+130_health-fitness-goals-on-instagram-day-62-still-goi.mp4
+Predicted class: 1
+Actual class: 2
+132_ve-shawn-owens-on-instagram-theyknowboxing-boxingw.mp4
+Predicted class: 7
+Actual class: 2
+136_knuck-fitness-gear-on-instagram-girl-push-ups-knuc.mp4
+Predicted class: 1
+Actual class: 2
+138_ua-taekwondo-on-instagram-look-at-these-crazy-push.mp4
+Predicted class: 7
+Actual class: 2
+110_akash-bhardwaj-20-on-instagram-this-one-for-freshm.mp4
+Predicted class: 5
+Actual class: 2
+163_tenacious-strength-society-on-instagram-we-have-be.mp4
+Predicted class: 0
+Actual class: 7
+165_locomotion-fitness-on-instagram-weightlifting-tip-.mp4
+Predicted class: 0
+Actual class: 7
+167_joe-dacey-on-instagram-110kg-attempt-crossfitcaerp.mp4
+Predicted class: 1
+Actual class: 7
+168_mikael-kurkdjian-on-instagram-cardio-workout-with-.mp4
+Predicted class: 6
+Actual class: 7
+271_jolly-roger-on-instagram-1-rep-ever-30-sec-for-20-.mp4
+Predicted class: 6
+Actual class: 7
+274_fabio-de-oliveira-on-instagram-voltamos-a-programa.mp4
+Predicted class: 0
+Actual class: 7
+276_ivan-danese-on-instagram-practice-and-repeat-pract.mp4
+Predicted class: 1
+Actual class: 7
+280_kayleb-q-on-instagram-snatch-work.mp4
+Predicted class: 1
+Actual class: 7
+282_the-forge-on-instagram-the-process-calvan-has-been.mp4
+Predicted class: 0
+Actual class: 7
+283_adri-c-utgard-halter-on-instagram-si-tienes-guardi.mp4
+Predicted class: 0
+Actual class: 7
+285_your-tiger-joshua-1-5-on-instagram-clean-and-jerk-.mp4
+Predicted class: 1
+Actual class: 7
+286_ryan-hansen-on-instagram-the-arnoldsports-meet-ao1.mp4
+Predicted class: 6
+Actual class: 7
+289_eder-rodriguez-on-instagram-a-little-slow-today-al.mp4
+Predicted class: 5
+Actual class: 7
+291_ashley-t-pitts-on-instagram-im-an-athlete-i-have-b.mp4
+Predicted class: 1
+Actual class: 7
+292_n-a-n-c-y-on-instagram-currently-in-the-middle-of-.mp4
+Predicted class: 5
+Actual class: 7
+295_matt-harper-diabeto-on-instagram-a-lot-of-work-nee.mp4
+Predicted class: 5
+Actual class: 7
+170_gymratshenanigans-on-instagram-snatch-day-is-the-b.mp4
+Predicted class: 0
+Actual class: 7
+270_gymratshenanigans-on-instagram-snatch-day-is-the-b.mp4
+Predicted class: 0
+Actual class: 7
+263_tenacious-strength-society-on-instagram-we-have-be.mp4
+Predicted class: 0
+Actual class: 7
+265_locomotion-fitness-on-instagram-weightlifting-tip-.mp4
+Predicted class: 0
+Actual class: 7
+267_joe-dacey-on-instagram-110kg-attempt-crossfitcaerp.mp4
+Predicted class: 1
+Actual class: 7
+268_mikael-kurkdjian-on-instagram-cardio-workout-with-.mp4
+Predicted class: 6
+Actual class: 7
+171_jolly-roger-on-instagram-1-rep-ever-30-sec-for-20-.mp4
+Predicted class: 6
+Actual class: 7
+174_fabio-de-oliveira-on-instagram-voltamos-a-programa.mp4
+Predicted class: 0
+Actual class: 7
+176_ivan-danese-on-instagram-practice-and-repeat-pract.mp4
+Predicted class: 1
+Actual class: 7
+180_kayleb-q-on-instagram-snatch-work.mp4
+Predicted class: 1
+Actual class: 7
+182_the-forge-on-instagram-the-process-calvan-has-been.mp4
+Predicted class: 0
+Actual class: 7
+183_adri-c-utgard-halter-on-instagram-si-tienes-guardi.mp4
+Predicted class: 0
+Actual class: 7
+185_your-tiger-joshua-1-5-on-instagram-clean-and-jerk-.mp4
+Predicted class: 1
+Actual class: 7
+186_ryan-hansen-on-instagram-the-arnoldsports-meet-ao1.mp4
+Predicted class: 6
+Actual class: 7
+189_eder-rodriguez-on-instagram-a-little-slow-today-al.mp4
+Predicted class: 5
+Actual class: 7
+191_ashley-t-pitts-on-instagram-im-an-athlete-i-have-b.mp4
+Predicted class: 1
+Actual class: 7
+192_n-a-n-c-y-on-instagram-currently-in-the-middle-of-.mp4
+Predicted class: 5
+Actual class: 7
+195_matt-harper-diabeto-on-instagram-a-lot-of-work-nee.mp4
+Predicted class: 5
+Actual class: 7
+101_jamie-thayer-ms-ace-cpt-on-instagram-youre-either-.mp4
+Predicted class: 3
+Actual class: 5
+107_ese-on-instagram-bootay-fat-burn-1-reverse-lunge-w.mp4
+Predicted class: 6
+Actual class: 5
+108_leia-nicole-fitness-on-instagram-its-workoutwednes.mp4
+Predicted class: 6
+Actual class: 5
+112_barbellfitness-on-instagram-6-legs-workout-superse.mp4
+Predicted class: 6
+Actual class: 5
+113_nikanovoselova-on-instagram-christmasworkout-is-do.mp4
+Predicted class: 0
+Actual class: 5
+0.6133333333333333

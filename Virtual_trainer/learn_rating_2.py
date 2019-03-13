@@ -20,7 +20,7 @@ from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
 from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, RankingEmbedder
 from models.loss import CustomRankingLoss
 from dataloader import *
-from simple_generators import SimpleSequenceGenerator
+from simple_generators import SimpleSequenceGenerator, SimpleSiameseGenerator
 from siamese_generator import SiameseGenerator
 from collections import OrderedDict
 
@@ -35,49 +35,6 @@ CHECKPATH = 'checkpoint'
 # Data mountpoint
 DATAPOINT = "Data"
 
-# model architecture
-filter_widths = [3,3,3]
-channels = 1024
-in_joints, in_dims, out_joints = 17, 2, 17
-causal = True
-embedding_len = 128
-embeds=[64,64]
-classes=8
-
-# --- params ---
-pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-15.pth") # pretrained base
-kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
-kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
-rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
-loss_margin = 0.3
-seed = 1234
-lr, lr_decay = 0.001 , 0.95 
-split_ratio = 0.2
-epochs = 20
-batch_size = 512
-n_chunks = 8
-
-model, eval_model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds,classes)
-
-receptive_field = model.base.receptive_field()
-pad = (receptive_field - 1) 
-causal_shift = pad
-
-# initialise everything
-actions, out_poses_2d,from_clip_flgs, return_idx, ratings = load_keypoints(kpfile_1,kpfile_2, # todo
-                                                                    rating_file,seed,selected_class)
-from siamese_generator import SiameseGenerator
-generator = SiameseGenerator(batch_size, actions, out_poses_2d,ratings,from_clip_flgs, pad=pad,
-                 causal_shift=causal_shift, test_split=split_ratio,n_chunks=n_chunks, random_seed=seed) # todo
-
-
-loss_fun = CustomRankingLoss(margin=loss_margin)
-optimizer = optim.Adam(list(model.embedding.parameters()),lr, amsgrad=True)
-losses_train = []
-losses_test = []
-
-# run training
-train_model(model,eval_model,epochs)
 
 def train_model(model,eval_model, epochs):
     loss_tuple = []
@@ -151,7 +108,7 @@ def save_checkpoint(loss_tuple):
             'optimizer_state_dict': optimizer.state_dict(),
             'losses_test': losses_test,
             'loss_tuple': loss_tuple
-            }, os.path.join(CHECKPATH,f'siamese-1-{selected_class}-{epoch}.pth') )
+            }, os.path.join(CHECKPATH,f'siamese-rankingloss-{epoch}.pth') )
 
 
 
@@ -173,7 +130,7 @@ def load_model_weights(chk_filename,base,top):
 
 def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds,classes):
 
-    base= TemporalModelOptimized1f(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
+    base= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
     top= ModdedStridedModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
     base_eval= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
     top_eval= ModdedTemporalModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
@@ -196,3 +153,47 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
           ('embedding', RankingEmbedder(embedding_len,embeds))
         ]))
     return model, eval_model
+
+# model architecture
+filter_widths = [3,3,3]
+channels = 1024
+in_joints, in_dims, out_joints = 17, 2, 17
+causal = True
+embedding_len = 128
+embeds=[64,64]
+classes=8
+
+# --- params ---
+pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth") # pretrained base
+kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
+kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
+rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
+loss_margin = 0.3
+seed = 1234
+lr, lr_decay = 0.001 , 0.95 
+split_ratio = 0.2
+epochs = 20
+batch_size = 512
+n_chunks = 8
+
+model, eval_model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len, embeds,classes)
+
+receptive_field = model.base.receptive_field()
+pad = (receptive_field - 1) 
+causal_shift = pad
+
+# initialise everything
+actions, out_poses_2d,from_clip_flgs, return_idx, ratings, filenames_final, targets = load_keypoints(kpfile_1,kpfile_2, # todo
+                                                                    rating_file,seed,None)
+
+generator = SimpleSiameseGenerator(batch_size, targets, out_poses_2d,ratings, pad=pad,
+                 causal_shift=causal_shift, test_split=split_ratio, random_seed=seed) # todo
+
+
+loss_fun = CustomRankingLoss(margin=loss_margin)
+optimizer = optim.Adam(list(model.embedding.parameters()),lr, amsgrad=True)
+losses_train = []
+losses_test = []
+
+# run training
+train_model(model,eval_model,epochs)
