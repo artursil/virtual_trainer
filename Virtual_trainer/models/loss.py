@@ -46,13 +46,21 @@ class CustomRankingLoss(nn.MarginRankingLoss):
         self.pairings = []
 
     def forward(self, embeddings, classes, rankings):
-        distances = torch.empty((0))
-        pairings = torch.empty((0))
+        my_zero = torch.zeros(1)
+        my_one = torch.ones(1)
+        my_empty = torch.empty((0))
+        if torch.cuda.is_available:
+            my_empty = my_empty.cuda()
+            my_one = my_one.cuda()
+            my_zero = my_zero.cuda()
+        distances = my_empty
+        pairings = my_empty
+
         top_mark = torch.max(rankings) # get the top rating (should be 9)
         for ex_class in torch.unique(classes):
-            ex_mask = torch.nonzero(torch.where(classes == ex_class,torch.ones(1),torch.zeros(1)))[:,0]
-            pos_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,torch.ones(1),torch.zeros(1)))[:,0]
-            neg_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,torch.zeros(1),torch.ones(1)))[:,0]
+            ex_mask = torch.nonzero(torch.where(classes == ex_class,my_one,my_zero)))[:,0]
+            pos_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,my_one,my_zero))[:,0]
+            neg_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,my_zero,my_one))[:,0]
             pos_dists = torch.max(dist_mat(embeddings[ex_mask[pos_mask]]),dim=1) # find hard positives
             # save pairings and distances for positives
             pairings = torch.cat( (pairings , (torch.stack((ex_mask[pos_mask],ex_mask[pos_dists[1]]))) ), dim=0)
