@@ -49,6 +49,11 @@ class CustomRankingLoss(nn.MarginRankingLoss):
         self.pairings = []
 
     def forward(self, embeddings, classes, rankings):
+        loss = self.forward_(embeddings, classes, rankings)
+        return loss
+
+    
+    def forward_(self, embeddings, classes, rankings):
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
@@ -84,4 +89,36 @@ class CustomRankingLoss(nn.MarginRankingLoss):
     def get_pairings(self):
         return self.pairings
 
+class CombinedLoss(CustomRankingLoss):
 
+    def __init__(self, cl_loss, weighting, supress_cl=6, margin=0., size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+        self.pairings = []
+        self.weighting = self.set_weighting(weighting)
+        self.cl_loss = cl_loss
+        self.supress_cl = supress_cl
+
+    def forward(self, embeddings, preds, classes, rankings):
+        # take classification loss
+        classloss = self.cl_loss(preds,classes)
+        
+        # supress control group (non exercise)
+        my_zero = torch.zeros(1)
+        my_one = torch.ones(1)
+        if torch.cuda.is_available():
+            my_one = my_one.cuda()
+            my_zero = my_zero.cuda()
+        mask = torch.nonzero(torch.where(classes == self.supress_cl,my_zero,my_one))[:,0]
+
+        # take ranking loss
+        rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
+
+        # scale by weighting
+        loss = torch.mul(rankloss, self.weighting) + torch.mul(classloss, (1 - self.weighting)) 
+
+        return loss
+    
+    def set_weighting(self, weighting):
+        assert weighting < 1
+        self.weighting = weighting
