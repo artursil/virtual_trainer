@@ -5,14 +5,16 @@ import time
 import torch
 
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
-from models.semantic import NaiveStridedModel,NaiveBaselineModel, HeadlessNet, SiameseNett
+from models.semantic import NaiveStridedModel,NaiveBaselineModel, HeadlessNet
 from models.loss import ContrastiveLoss
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
 from siamese_generator import SiameseGenerator
+import gc
 
 try:
     # Create checkpoint directory if it does not exist
@@ -66,7 +68,8 @@ def train_epoch():
         optimizer.zero_grad()
         embed1, embed2 = model(X1), model(X2)
         batch_loss = loss_fun(embed1, embed2, diffs)
-        stats_dict = create_stats_dict(batch_i,stats_dict,infos,None,None,batch_loss,diffs,selected_class)
+        if epoch%20==0:
+            stats_dict = create_stats_dict(batch_i,stats_dict,infos,None,None,batch_loss,diffs,selected_class)
         # print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
@@ -92,7 +95,8 @@ def evaluate_epoch():
                 X2 = X2.cuda()
             embed1, embed2 = model(X1), model(X2)
             batch_loss = loss_fun(embed1, embed2, diffs)
-            stats_dict = create_stats_dict(batch_i,stats_dict,infos,embed1,embed2,batch_loss,diffs,selected_class)
+            if epoch%20==0:
+                stats_dict = create_stats_dict(batch_i,stats_dict,infos,embed1,embed2,batch_loss,diffs,selected_class)
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())   
             batch_i+=1
     return epoch_loss_test, stats_dict 
@@ -105,7 +109,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple, stats_t
             np.mean(epoch_loss_train), epoch)) 
     print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
             np.mean(epoch_loss_test), epoch))
-    if epoch%1==0:
+    if epoch%20==0:
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -114,7 +118,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple, stats_t
 #                'loss_tuple': loss_tuple
                 }, #os.path.join(CHECKPATH,f'siamese-recipe2-{selected_class}-{epoch}.pth') 
 #                f'/media/artursil/DATA/checkpoints/siamese-recipe2-{selected_class}-{epoch}.pth'
-                f'/media/artursil/DATA/checkpoints/siamese-recipe2-all-{epoch}.pth'
+                f'/media/artursil/DATA/checkpoints/siamese-recipe3-all-{epoch}.pth'
                 
                 )
         torch.save({
@@ -123,7 +127,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple, stats_t
                 'stats_val': stats_val,
                 }, #os.path.join(CHECKPATH,f'siamese-recipe2-{selected_class}-{epoch}.pth') 
 #                f'/media/artursil/DATA/checkpoints/siamese-recipe2-stats-{selected_class}-{epoch}.pth'
-                f'/media/artursil/DATA/checkpoints/siamese-recipe2-stats-all-{epoch}.pth'
+                f'/media/artursil/DATA/checkpoints/siamese-recipe3-stats-all-{epoch}.pth'
                 )
 
 
@@ -179,7 +183,8 @@ generator = SiameseSimpleGenerator(batch_size, targets, out_poses_2d,ratings,fil
                  test_split=split_ratio,n_chunks=n_chunks,
                  random_seed=seed,only_rated=False,oversample=True)
 
-loss_fun = ContrastiveLoss(rate_range,loss_margin)
+# loss_fun = ContrastiveLoss(rate_range,loss_margin)
+loss_fun = ContrastiveLoss(loss_margin)
 losses_train = []
 losses_test = []
 
@@ -189,9 +194,10 @@ class LinearModel(nn.Module):
 
         super().__init__() 
         self.linear = nn.Linear(input_dim, output_dim)
+        self.linear2 = nn.Linear(output_dim,output_dim)
 
     def forward(self, x):
-        out = self.linear(x)
+        out = self.linear2(F.relu(self.linear(x)))
         return out   
 
 model = LinearModel(128,64)
@@ -208,9 +214,11 @@ for epoch in range(1,epochs+1):
     epoch_loss_test, stats_val = evaluate_epoch()
 #    stats_train_l.append(stats_train)
 #    stats_val_l.append(stats_val)
-    loss_tuple = loss_fun.get_tuples()
+#    loss_tuple = loss_fun.get_tuples()
+    loss_tuple = []
     log_results(epoch, st, epoch_loss_train, epoch_loss_test,loss_tuple, stats_train, stats_val)
     lr *= lr_decay
+    gc.collect()
     for param_group in optimizer.param_groups:
         param_group['lr'] *= lr_decay
 
