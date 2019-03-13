@@ -7,6 +7,8 @@ def dist_mat(embeddings):
     # Reconstruct distance matrix because torch.pdist gives back a condensed flattened vector
     n_samples = embeddings.shape[0]
     mat = torch.zeros(n_samples,n_samples)
+    if torch.cuda.is_available():
+        mat = mat.cuda()
     dists = F.pdist(embeddings)
     s_ = 0
     for i , n in enumerate(reversed(range(1,n_samples))):
@@ -49,7 +51,7 @@ class CustomRankingLoss(nn.MarginRankingLoss):
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             my_empty = my_empty.cuda()
             my_one = my_one.cuda()
             my_zero = my_zero.cuda()
