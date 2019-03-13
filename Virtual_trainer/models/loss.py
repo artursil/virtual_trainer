@@ -54,6 +54,10 @@ class CustomRankingLoss(nn.MarginRankingLoss):
 
     
     def forward_(self, embeddings, classes, rankings):
+        # if rankings.dtype==torch.int64:
+        #     rankings = rankings.unsqueeze(0)
+        # if classes.dtype==torch.int64:
+        #     classes = classes.unsqueeze(0)
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
