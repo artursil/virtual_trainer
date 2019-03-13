@@ -7,6 +7,8 @@ def dist_mat(embeddings):
     # Reconstruct distance matrix because torch.pdist gives back a condensed flattened vector
     n_samples = embeddings.shape[0]
     mat = torch.zeros(n_samples,n_samples)
+    if torch.cuda.is_available():
+        mat = mat.cuda()
     dists = F.pdist(embeddings)
     s_ = 0
     for i , n in enumerate(reversed(range(1,n_samples))):
@@ -49,12 +51,12 @@ class CustomRankingLoss(nn.MarginRankingLoss):
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             my_empty = my_empty.cuda()
             my_one = my_one.cuda()
             my_zero = my_zero.cuda()
         distances = my_empty
-        pairings = my_empty
+        pairings = []   
 
         top_mark = torch.max(rankings) # get the top rating (should be 9)
         for ex_class in torch.unique(classes):
@@ -63,17 +65,17 @@ class CustomRankingLoss(nn.MarginRankingLoss):
             neg_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,my_zero,my_one))[:,0]
             pos_dists = torch.max(dist_mat(embeddings[ex_mask[pos_mask]]),dim=1)# find hard positives
             # save pairings and distances for positives
-            pairings = torch.cat( (pairings , (torch.stack((ex_mask[pos_mask],ex_mask[pos_dists[1]]))).to(torch.float32) ), dim=0)
-            distances = torch.cat((distances,pos_dists[0].cuda() ), dim=0)
+            pairings += np.stack((ex_mask[pos_mask].detach().cpu().numpy(),ex_mask[pos_dists[1]].detach.cpu().numpy() ), axis=0)
+            distances = torch.cat((distances,pos_dists[0]), dim=0)
             for positive in pos_mask:
                 emb_ = embeddings[ex_mask[positive]].repeat(neg_mask.shape[0],1)
                 exp_dist = top_mark - rankings[ex_mask[neg_mask]] # expected distance
                 hard_neg = torch.max(torch.abs(F.pairwise_distance(emb_, embeddings[ex_mask[neg_mask]]) - exp_dist.to(torch.float32)),dim=0)
                 # save pairing and distance of hard negative
-                pairings = torch.cat( (pairings, torch.tensor([ex_mask[positive],ex_mask[torch.max(hard_neg[1])]]).cuda().to(dtype=torch.float32)) , dim=0)
-                distances = torch.cat( (distances, torch.tensor([hard_neg[0]]).cuda()), dim=0)
+                pairings += [ex_mask[positive].detach().cpu().numpy(),ex_mask[hard_neg[1]].detach().cpu().numpy()]
+                distances = torch.cat( (distances, torch.tensor([hard_neg[0]])), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))
-        self.pairings = pairings.detach().cpu().numpy()
+        self.pairings = pairings
         return loss
 
     def get_pairings(self):
