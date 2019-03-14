@@ -44,7 +44,7 @@ def train_model(model,eval_model, epochs):
             eval_model.cuda()
         st = time.time()
         epoch_loss_train = train_epoch(model)
-        eval_model.load_state_dict(model.state_dict)
+        eval_model.load_state_dict(model.state_dict())
         epoch_loss_test = evaluate_epoch(eval_model)
         loss_tuple.append(loss_fun.get_pairings())
         log_results(epoch, st, epoch_loss_train, epoch_loss_test)
@@ -81,8 +81,8 @@ def evaluate_epoch(model):
         epoch_loss_test = []
         for X, classes, rankings in generator.next_validation():
             X = torch.from_numpy(X.astype('float32'))
-            classes = torch.from_numpy(classes.astype('long'))
-            rankings = torch.from_numpy(rankings.astype('long'))
+            classes = torch.from_numpy(np.expand_dims(np.array(classes).astype('long'),0))
+            rankings = torch.from_numpy(np.expand_dims(np.array(rankings).astype('long'),0))
             if torch.cuda.is_available():
                 X = X.cuda()
                 classes = classes.cuda()

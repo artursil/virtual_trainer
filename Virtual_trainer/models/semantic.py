@@ -144,7 +144,9 @@ class RankingEmbedder(nn.Module):
                 modules.append(nn.ReLU())
         self.linears = nn.ModuleList(modules)
     def forward(self,x):        
-        x.squeeze_(2)
+        print(x.shape)
+        x= x.permute(0,2,1).squeeze()
+        print(x.shape)
         for module in self.linears:
             x = module(x)
         return x
