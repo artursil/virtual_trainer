@@ -71,8 +71,8 @@ def train_epoch(model):
             rankings = rankings.cuda()
         
         optimizer.zero_grad()
-        embeds = model(X)
-        batch_loss = loss_fun(embeds, classes, rankings)
+        embeds, preds = model(X)
+        batch_loss = loss_fun(embeds, preds, classes, rankings)
         print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
@@ -91,8 +91,8 @@ def evaluate_epoch(model):
                 X = X.cuda()
                 classes = classes.cuda()
                 rankings = rankings.cuda()
-            embeds = model(X)
-            batch_loss = loss_fun(embeds, classes, rankings)
+            embeds, preds = model(X)
+            batch_loss = loss_fun(embeds, preds, classes, rankings)
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())     
     return epoch_loss_test 
 
