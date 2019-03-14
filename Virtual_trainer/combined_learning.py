@@ -30,10 +30,10 @@ try:
 except OSError as e:
     if e.errno != errno.EEXIST:
         raise RuntimeError('Unable to create checkpoint directory:', 'checkpoint')
-CHECKPATH = 'checkpoint'
+CHECKPATH = '/home/ahmad/project/checkpoint'
 
 # Data mountpoint
-DATAPOINT = "Data"
+DATAPOINT = "/home/ahmad/project/Data"
 
 
 def train_model(model,eval_model, epochs):
@@ -44,7 +44,7 @@ def train_model(model,eval_model, epochs):
             eval_model.cuda()
         st = time.time()
         epoch_loss_train = train_epoch(model)
-        eval_model.load_state_dict(model.state_dict)
+        eval_model.load_state_dict(model.state_dict())
         epoch_loss_test = evaluate_epoch(eval_model)
         loss_tuple.append(loss_fun.get_pairings())
         log_results(epoch, st, epoch_loss_train, epoch_loss_test)
@@ -127,9 +127,10 @@ def load_model_weights(chk_filename,base,top, class_mod):
     
     base_weights = OrderedDict([(re.sub(r"(base_model.)","",key), value) for key, value in pretrained_weights.items() if key.startswith("base_model")])
     top_weights = OrderedDict([(re.sub(r"(top_model.)","",key), value) for key, value in pretrained_weights.items() if key.startswith("top_model")])
-    class_weights = OrderedDict([(key, value) for key, value in top_weights.items() if key.startswith("shrink")])
+    class_weights = OrderedDict([(re.sub(r"(shrink.)","",key), value) for key, value in top_weights.items() if key.startswith("shrink")])
 
-    for k in class_weights.keys():
+    drop_keys = [f"shrink.{k}" for k in class_weights.keys()]
+    for k in drop_keys:
         top_weights.pop(k)
     base.load_state_dict(base_weights, strict=False)
     top.load_state_dict(top_weights, strict=False)

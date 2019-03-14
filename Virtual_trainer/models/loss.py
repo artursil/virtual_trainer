@@ -6,7 +6,8 @@ from itertools import combinations , product
 
 def dist_mat(embeddings):
     # Reconstruct distance matrix because torch.pdist gives back a condensed flattened vector
-    n_samples = embeddings.shape[0]
+    
+    n_samples = embeddings.squeeze_().shape[0]
     mat = torch.zeros(n_samples,n_samples)
     if torch.cuda.is_available():
         mat = mat.cuda()
@@ -99,12 +100,12 @@ class CombinedLoss(CustomRankingLoss):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
         self.pairings = []
-        self.weighting = self.set_weighting(weighting)
+        self.weighting = weighting
         self.cl_loss = cl_loss
         self.supress_cl = supress_cl
 
     def forward(self, embeddings, preds, classes, rankings):
-        weighting = self.weighting
+        weighting = torch.tensor(self.weighting)
 
         # take classification loss
         classloss = self.cl_loss(preds,classes)
