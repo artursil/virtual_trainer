@@ -156,7 +156,7 @@ class SimpleSiameseGenerator:
                 x_ind = int(x_ind)
                 idx_fin = x_ind + self.receptive_field
 
-                self.batch_X[i,:,:,:] = self.X_train[clip_idx][x_ind:idx_fin,:,:]
+                self.batch_X[i,:,:,:] = self.X_test[clip_idx][x_ind:idx_fin,:,:]
                 self.batch_y[i,:] = y_val
                 self.batch_r[i,:] = r_val
             yield  self.batch_X, self.batch_y, self.batch_r

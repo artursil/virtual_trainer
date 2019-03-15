@@ -36,16 +36,14 @@ CHECKPATH = '/home/ahmad/project/checkpoint'
 DATAPOINT = "/home/ahmad/project/Data"
 
 
-def train_model(model,eval_model, epochs):
+def train_model(model, epochs):
     loss_tuple = []
     for epoch in range(1,epochs+1):
         if torch.cuda.is_available():
             model.cuda()
-            eval_model.cuda()
         st = time.time()
-        #epoch_loss_train = train_epoch(model)
-        eval_model.load_state_dict(model.state_dict())
-        epoch_loss_test = evaluate_epoch(eval_model)
+        epoch_loss_train = train_epoch(model)
+        epoch_loss_test = evaluate_epoch(model)
         loss_tuple.append(loss_fun.get_pairings())
         log_results(epoch, st, epoch_loss_train, epoch_loss_test)
         lr *= lr_decay
@@ -77,7 +75,8 @@ def train_epoch(model):
         print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
-        optimizer.step()  
+        optimizer.step()
+        break  
     return epoch_loss_train
 
 def evaluate_epoch(model):
@@ -86,8 +85,8 @@ def evaluate_epoch(model):
         epoch_loss_test = []
         for X, classes, rankings in generator.next_validation():
             X = torch.from_numpy(X.astype('float32'))
-            classes = torch.tensor(classes, dtype=torch.long).repeat(X.shape[1] - 52) #(np.array(classes).astype('long'))
-            rankings = torch.tensor(rankings, dtype=torch.long).repeat(X.shape[1] - 52) #torch.from_numpy(rankings.astype('long'))
+            classes = torch.from_numpy(classes.astype('long'))
+            rankings = torch.from_numpy(rankings.astype('long'))
             if torch.cuda.is_available():
                 X = X.cuda()
                 classes = classes.cuda()
@@ -142,8 +141,6 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
 
     base= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
     top= ModdedStridedModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
-    base_eval= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
-    top_eval= ModdedTemporalModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
     class_mod = nn.Conv1d( embedding_len, classes, 1)
 
     base, top, class_mod = load_model_weights(chk_filename,base,top,class_mod)
@@ -153,14 +150,7 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
           ('embedding', HeadlessNet2(top)),
           ('classifier', SplitModel(class_mod) )
         ]))
-
-    eval_model = nn.Sequential(OrderedDict([
-          ('base', base_eval) ,
-          ('transform', StandardiseKeypoints(True,False)),
-          ('embedding', HeadlessNet2(top_eval)),
-          ('classifier', SplitModel(class_mod))
-        ]))
-    return model, eval_model
+    return model 
 
 # model architecture
 filter_widths = [3,3,3]
@@ -183,10 +173,10 @@ epochs = 20
 batch_size = 512
 n_chunks = 8
 weighting = 0.99 # classification loss weighting
-weighting_decay = 0.9 
+weighting_decay = 0.95  
 supress_cl = 6 # non exercise class id to supress from ranking loss
 
-model, eval_model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
+model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
 
 receptive_field = model.base.receptive_field()
 pad = (receptive_field - 1) 
@@ -207,4 +197,4 @@ losses_train = []
 losses_test = []
 
 # run training
-train_model(model,eval_model,epochs)
+train_model(model,epochs)

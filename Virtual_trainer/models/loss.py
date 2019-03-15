@@ -80,6 +80,9 @@ class CustomRankingLoss(nn.MarginRankingLoss):
             # save pairings and distances for positives
             pairings.append(np.stack((ex_mask[pos_mask].detach().cpu().numpy(),ex_mask[pos_dists[1]].detach().cpu().numpy() ), axis=0))
             distances = torch.cat((distances,pos_dists[0]), dim=0)
+
+            if len(neg_mask)<1:
+                continue
             for positive in pos_mask:
                 emb_ = embeddings[ex_mask[positive]].repeat(neg_mask.shape[0],1)
                 exp_dist = top_mark - rankings[ex_mask[neg_mask]] # expected distance
@@ -108,7 +111,7 @@ class CombinedLoss(CustomRankingLoss):
         weighting = torch.tensor(self.weighting)
         preds = preds.squeeze()
         embeddings = embeddings.squeeze()
-        
+        classes = classes.squeeze()
         # take classification loss
         classloss = self.cl_loss(preds,classes)
         
@@ -125,6 +128,7 @@ class CombinedLoss(CustomRankingLoss):
         # take ranking loss
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
 
+        print(f"Unweighted losses: Classification C/E {classloss} , Ranking MSE {rankloss}")
         # scale by weighting
         if torch.cuda.is_available():
             weighting = weighting.cuda()
