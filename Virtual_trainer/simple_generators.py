@@ -81,6 +81,7 @@ class SimpleSiameseGenerator:
         self.r_train, self.r_test = self.X_train[:,1] , self.X_test[:,1]  
         self.X_train, self.X_test = self.X_train[:,0] , self.X_test[:,0]  
         self.next_epoch()
+        self.build_chunks_val()
     
     def next_epoch(self):
         
