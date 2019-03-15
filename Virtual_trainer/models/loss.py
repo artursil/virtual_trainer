@@ -106,7 +106,9 @@ class CombinedLoss(CustomRankingLoss):
 
     def forward(self, embeddings, preds, classes, rankings):
         weighting = torch.tensor(self.weighting)
-
+        preds = preds.squeeze()
+        embeddings = embeddings.squeeze()
+        
         # take classification loss
         classloss = self.cl_loss(preds,classes)
         
@@ -118,6 +120,8 @@ class CombinedLoss(CustomRankingLoss):
             my_zero = my_zero.cuda()
         mask = torch.nonzero(torch.where(classes == self.supress_cl,my_zero,my_one))[:,0]
 
+        import pdb
+        #pdb.set_trace()
         # take ranking loss
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
 

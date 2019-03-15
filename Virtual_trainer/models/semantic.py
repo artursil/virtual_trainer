@@ -82,8 +82,8 @@ class SplitModel(nn.Module):
         super().__init__()
         self.class_model = class_model
     def forward(self,x):
-        pred = self.class_model(x)
-        embed = x.squeeze() # conv produces 1*128 , want flat 128
+        pred = self.class_model(x).permute(0,2,1)
+        embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
         return embed, pred
 
 class StandardiseKeypoints(nn.Module):
