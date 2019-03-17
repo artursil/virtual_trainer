@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from itertools import combinations , product
+import neptune
 
 def dist_mat(embeddings):
     # Reconstruct distance matrix because torch.pdist gives back a condensed flattened vector
@@ -129,6 +130,8 @@ class CombinedLoss(CustomRankingLoss):
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
 
         print(f"Unweighted losses: Classification C/E {classloss} , Ranking MSE {rankloss}")
+        neptune.send_metric('classification_CE', classloss)
+        neptune.send_metric('Ranking_MSE', rankloss)
         # scale by weighting
         if torch.cuda.is_available():
             weighting = weighting.cuda()

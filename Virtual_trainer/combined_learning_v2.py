@@ -17,6 +17,8 @@ import torch.optim as optim
 import numpy as np
 
 from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
+import neptune
+from neptune_connector.np_config import NEPTUNE_TOKEN
 from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel
 from models.loss import CombinedLoss
 from dataloader import *
@@ -30,22 +32,45 @@ try:
 except OSError as e:
     if e.errno != errno.EEXIST:
         raise RuntimeError('Unable to create checkpoint directory:', 'checkpoint')
-CHECKPATH = '/home/ahmad/project/checkpoint'
+CHECKPATH = 'checkpoint'
 
 # Data mountpoint
-DATAPOINT = "/home/ahmad/project/Data"
+DATAPOINT = "Data"
+PROJECT_NAME = 'VT-combined'
+EXPERIMENT_NAME = '2nd_part2'
+
+loss_margin = 0.3
+seed = 1234
+lr, lr_decay = 0.001 , 0.95 
+split_ratio = 0.2
+epochs = 10
+batch_size = 512
+n_chunks = 8
+weighting = 0.999 # classification loss weighting
+weighting_decay = 0.95 
+supress_cl = 6 
 
 
-def train_model(model, epochs):
+neptune.init(api_token=NEPTUNE_TOKEN,
+             project_qualified_name=f'artursil/{PROJECT_NAME}')
+neptune.create_experiment(EXPERIMENT_NAME,
+                          params={'weighting': weighting,
+                                  'weighting_decay': weighting_decay,
+                                  'batch_size':batch_size,
+                                  'lr':lr,
+                                  'lr_decay':lr_decay
+                                  })
+
+def train_model(model,epoch_start, epochs,lr,lr_decay,weighting,weighting_decay):
     loss_tuple = []
-    for epoch in range(1,epochs+1):
+    for epoch in range(epoch_start,epochs+1):
         if torch.cuda.is_available():
             model.cuda()
         st = time.time()
         epoch_loss_train = train_epoch(model)
-        epoch_loss_test = evaluate_epoch(model)
+        epoch_loss_test, val_targets = evaluate_epoch(model)
         loss_tuple.append(loss_fun.get_pairings())
-        log_results(epoch, st, epoch_loss_train, epoch_loss_test)
+        log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets)
         lr *= lr_decay
         
         weighting *= weighting_decay
@@ -73,46 +98,52 @@ def train_epoch(model):
         embeds, preds = model(X)
         batch_loss = loss_fun(embeds, preds, classes, rankings)
         print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
+        neptune.send_metric('batch_loss', batch_loss)
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
-        break  
     return epoch_loss_train
 
 def evaluate_epoch(model):
     with torch.no_grad():
         model.eval()
         epoch_loss_test = []
+        targets = []
         for X, classes, rankings in generator.next_validation():
             X = torch.from_numpy(X.astype('float32'))
-            classes = torch.from_numpy(classes.astype('long'))
-            rankings = torch.from_numpy(rankings.astype('long'))
+            classes_np = torch.from_numpy(classes.astype('long'))
+            rankings_np = torch.from_numpy(rankings.astype('long'))
             if torch.cuda.is_available():
                 X = X.cuda()
-                classes = classes.cuda()
-                rankings = rankings.cuda()
+                classes = classes_np.cuda()
+                rankings = rankings_np.cuda()
             embeds, preds = model(X)
             batch_loss = loss_fun(embeds, preds, classes, rankings)
-            epoch_loss_test.append(batch_loss.detach().cpu().numpy())     
-    return epoch_loss_test 
+            epoch_loss_test.append(batch_loss.detach().cpu().numpy())
+            targets.append((classes_np,rankings_np,preds.detach().cpu().numpy(),
+                            embeds.detach().cpu().numpy()))     
+    return epoch_loss_test, targets
 
-def log_results(epoch, st, epoch_loss_train, epoch_loss_test):  
+def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets):  
     losses_train.append(epoch_loss_train)
     losses_test.append(epoch_loss_test)
     print(f'Time per epoch: {(time.time()-st)//60}')
     print('{{"metric": "Training Loss", "value": {}, "epoch": {}}}'.format(
-            np.mean(epoch_loss_train), epoch)) 
+            np.mean(epoch_loss_train), epoch))
+    neptune.send_metric('training_loss', np.mean(epoch_loss_train))
     print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
             np.mean(epoch_loss_test), epoch))
+    neptune.send_metric('val_loss', np.mean(epoch_loss_test))
 
-def save_checkpoint(loss_tuple): 
+# def save_checkpoint(loss_tuple): 
     torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'losses_test': losses_test,
-            'loss_tuple': loss_tuple
-            }, os.path.join(CHECKPATH,f'combinedlearning-{epoch}.pth') )
+            # 'loss_tuple': loss_tuple
+            'validation_targets':val_targets
+            }, os.path.join(CHECKPATH,f'combinedlearning-{EXPERIMENT_NAME}-{epoch}.pth') )
 
 
 
@@ -165,18 +196,17 @@ pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth") # pretrained base
 kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
 kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
 rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
-loss_margin = 0.3
-seed = 1234
-lr, lr_decay = 0.001 , 0.95 
-split_ratio = 0.2
-epochs = 20
-batch_size = 512
-n_chunks = 8
-weighting = 0.99 # classification loss weighting
-weighting_decay = 0.95  
-supress_cl = 6 # non exercise class id to supress from ranking loss
+# non exercise class id to supress from ranking loss
 
 model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
+
+epoch=1
+
+checkp = torch.load('/checkpoint/combinedlearning-2nd-4.pth')
+epoch = checkp['epoch']+1
+model.load_state_dict(checkp['model_state_dict'])
+
+weighting *= (epoch-1)*weighting_decay
 
 receptive_field = model.base.receptive_field()
 pad = (receptive_field - 1) 
@@ -197,4 +227,4 @@ losses_train = []
 losses_test = []
 
 # run training
-train_model(model,epochs)
+train_model(model,epoch,epochs,lr,lr_decay,weighting,weighting_decay)

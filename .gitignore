@@ -29,7 +29,8 @@ analytics/
 tags
 *.avi
 *.mp4
-outputs*
+*outputs*
+neptune_connector/
 # C extensions
 *.so
 
