@@ -24,16 +24,16 @@ def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
     classes, rankings, preds, embeds = [],[],[],[]
     idx1, idx2, dists = [], [], []
 
-    #p_ = np.concatenate(pairings)
     for t_ , p_ in zip(target_vals, pairings):
         cl_,ra_,pr_,em_ = t_
+        ix1_, ix2_, dist_, _ = zip(*p_)
+        ix1_ = np.array(ix1_,dtype="int") + len(rankings)
+        ix2_ = np.array(ix2_,dtype="int") + len(rankings)
         classes.append(cl_)
         rankings.append(ra_)
         preds.append(pr_)
         embeds.append(em_)
-        ix1_, ix2_, dist_, _ = p_
-        ix1_ = np.array(ix1_,dtype="int") + len(rankings)
-        ix2_ = np.array(ix2_,dtype="int") + len(rankings)
+
         idx1.append(ix1_)
         idx2.append(ix2_)
         dists.append(dist_)
@@ -43,14 +43,11 @@ def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
     rankings = np.squeeze(np.concatenate(rankings))
     predictions = np.concatenate([softmax(p,axis=0) for p in preds])
     embeds = np.concatenate(embeds)
-    
-    
-    idx1 = np.array(idx1,dtype="int")
-    idx2 = np.array(idx2,dtype="int")
-    dists = np.array(dists)
+    dists = np.concatenate(dists)
+    idx1 = np.concatenate(idx1)
+    idx2 = np.concatenate(idx2)
     
     activations = np.argmax(predictions,axis=1) 
-    print(activations.shape)
     conf_mat = confusion_matrix(classes,activations)
     plt.figure(figsize=[10,8])
     plot_confusion_matrix(conf_mat, classes=class_names, normalize=False,
@@ -66,7 +63,7 @@ def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
 
     
     palette = magma(num_of_classes + 1)
-    p = figure(plot_width=500, plot_height=500, title=f"Ranking by exercise, epoch {epoch}")
+    p = figure(plot_width=600, plot_height=800, title=f"Ranking by exercise, epoch {epoch}")
     p.xgrid.grid_line_color = None
     p.xaxis.axis_label = 'Target ranking'
     p.yaxis.axis_label = 'Predicted ranking'

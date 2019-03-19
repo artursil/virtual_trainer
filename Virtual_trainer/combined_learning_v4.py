@@ -40,7 +40,7 @@ CHECKPATH = '../../../artur-checkpoints' # 'checkpoint'
 # Data mountpoint
 DATAPOINT = "../../../Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = 'v4-RMSE'
+EXPERIMENT_NAME = 'v4-RMSE-fixed'
 METRICSPATH = os.path.join('..','..','..','metrics',EXPERIMENT_NAME)
 
 
@@ -66,7 +66,6 @@ class_weight =[1.,1.,2.,2.,2.,2.,2.,2.]
 rmse = True
 
 
-
 neptune.init(api_token=NEPTUNE_TOKEN,
              project_qualified_name=f'artursil/{PROJECT_NAME}')
 neptune.create_experiment(EXPERIMENT_NAME,
@@ -78,6 +77,7 @@ neptune.create_experiment(EXPERIMENT_NAME,
                                   'loss_margin': loss_margin
                                   
                                   })
+
 
 def train_model(model,epoch_start, epochs,lr,lr_decay,weighting,weighting_decay):
     loss_tuple = []
@@ -115,11 +115,11 @@ def train_epoch(model):
         optimizer.zero_grad()
         embeds, preds = model(X)
         batch_loss = loss_fun(embeds, preds, classes, rankings)
-        #print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
         neptune.send_metric('batch_loss', batch_loss)
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
+        
         
     return epoch_loss_train
 
@@ -138,7 +138,7 @@ def evaluate_epoch(model):
                 rankings = rankings.cuda()
             embeds, preds = model(X)
             batch_loss = loss_fun(embeds, preds, classes, rankings)
-            pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()],axis=0))
+            pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()]))
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             targets.append( (classes_np,rankings_np,preds.detach().cpu().numpy().squeeze(),
                             embeds.detach().cpu().numpy().squeeze()) )     
@@ -154,13 +154,11 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairin
     neptune.send_metric('training_loss', np.mean(epoch_loss_train))
     neptune.send_metric('val_loss', np.mean(epoch_loss_test))
 
-# def save_checkpoint(loss_tuple): 
     torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'losses_test': losses_test,
-            # 'loss_tuple': loss_tuple
             'validation_targets':val_targets
             }, os.path.join(CHECKPATH,f'combinedlearning-{EXPERIMENT_NAME}-{epoch}.pth') )
 
@@ -224,10 +222,10 @@ model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, c
 
 epoch=1
 
-resume_cp = os.path.join(CHECKPATH,'combinedlearning-1st-4.pth')
-checkp = torch.load(resume_cp)
-epoch = checkp['epoch']+1
-model.load_state_dict(checkp['model_state_dict'])
+#resume_cp = os.path.join(CHECKPATH,'combinedlearning-1st-4.pth')
+#checkp = torch.load(resume_cp)
+#epoch = checkp['epoch']+1
+#model.load_state_dict(checkp['model_state_dict'])
 
 #weighting *= weighting_decay**(epoch-1)
 

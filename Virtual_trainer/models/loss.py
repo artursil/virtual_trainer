@@ -100,7 +100,8 @@ class CustomRankingLoss(nn.MarginRankingLoss):
                 distances = torch.cat( (distances, torch.tensor(torch.max(hard_neg[0])).unsqueeze(0)), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))
         self.pairings = pairings
-        return loss.pow(1/2) if self.rooting else loss # RMSE or MSE 
+        
+        return torch.sqrt(loss) if self.rooting else loss # RMSE or MSE 
 
     def get_pairings(self):
         return self.pairings
@@ -132,14 +133,13 @@ class CombinedLoss(CustomRankingLoss):
             my_zero = my_zero.cuda()
         mask = torch.nonzero(torch.where(classes == self.supress_cl,my_zero,my_one))[:,0]
 
-        import pdb
-        #pdb.set_trace()
+        
         # take ranking loss
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
-
-        print(f"Unweighted losses: Classification C/E {classloss} , Ranking MSE {rankloss}")
+        rank_method = "RMSE" if self.rooting else "MSE"
+        print(f"Unweighted losses: Classification C/E {classloss} , Ranking {rank_method} {rankloss}")
         neptune.send_metric('classification_CE', classloss)
-        neptune.send_metric('Ranking_MSE', rankloss)
+        neptune.send_metric(f'Ranking_{rank_method}', rankloss)
         # scale by weighting
         if torch.cuda.is_available():
             weighting = weighting.cuda()
