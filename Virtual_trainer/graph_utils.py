@@ -71,6 +71,8 @@ def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
 
     
     for cl in range(num_of_classes):
+        if cl == 6:
+            continue
         df2 = df.loc[df['class']==cl]
         p.circle(x=jitter('tar', 0.5), y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
         p.line(x='tar', y='pred', line_width=2, alpha=0.5, color=palette[cl], source=df2.groupby(by="tar").mean())
