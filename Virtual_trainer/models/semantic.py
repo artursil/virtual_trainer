@@ -86,6 +86,19 @@ class SplitModel(nn.Module):
         embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
         return embed, pred
 
+class SplitModel2(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        self.class_model = class_model
+        self.embed_layer = nn.Conv1d(128,64,1)
+    def forward(self,x):
+        pred = self.class_model(x).permute(0,2,1)
+        embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
+        return embed, pred
+
 class StandardiseKeypoints(nn.Module):
     """
     transformer for standardising 3D keypoints
