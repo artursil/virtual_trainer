@@ -216,6 +216,7 @@ pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth") # pretrained base
 kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
 kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
 rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
+ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 # non exercise class id to supress from ranking loss
 
 model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
@@ -238,6 +239,16 @@ class_weight = torch.tensor(class_weight, dtype=torch.float)
 # initialise everything
 actions, out_poses_2d,from_clip_flgs, return_idx, ratings, filenames_final, targets = load_keypoints(kpfile_1,kpfile_2, # todo
                                                                     rating_file,seed,None)
+action_ucf, poses_ucf, _ = fetch_openpose_keypoints(ucf_file)
+action_ucf = [action if action!=8 else 6 for action in action_ucf]
+poses_ucf = [p for a,p in zip(action_ucf,poses_ucf) if a==6]
+action_ucf = [action for action in action_ucf if action==6]
+action_ucf, poses_ucf = action_ucf[:50], poses_ucf[:50]
+ratings_ucf = [0] * len(action_ucf)
+
+targets += action_ucf
+out_poses_2d += poses_ucf
+ratings += ratings_ucf
 
 generator = SimpleSiameseGenerator(batch_size, targets, out_poses_2d,ratings, pad=pad,
                  causal_shift=causal_shift, test_split=split_ratio, random_seed=seed) # todo
