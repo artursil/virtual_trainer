@@ -45,10 +45,11 @@ class ContrastiveLoss(nn.MarginRankingLoss):
 class CustomRankingLoss(nn.MarginRankingLoss):
     #  loss function that for each exercise selects hard pairs of positives and negatives (adjusted for expected distance) and finds MSE of their L2 distances
 
-    def __init__(self, margin=0., size_average=None, reduce=None, reduction='mean'):
+    def __init__(self, rooting=False, margin=0., size_average=None, reduce=None, reduction='mean'):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
         self.pairings = []
+        self.rooting = rooting
 
     def forward(self, embeddings, classes, rankings):
         loss = self.forward_(embeddings, classes, rankings)
@@ -79,7 +80,11 @@ class CustomRankingLoss(nn.MarginRankingLoss):
             neg_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,my_zero,my_one))[:,0]
             pos_dists = torch.max(dist_mat(embeddings[ex_mask[pos_mask]]),dim=1)# find hard positives
             # save pairings and distances for positives
-            pairings.append(np.stack((ex_mask[pos_mask].detach().cpu().numpy(),ex_mask[pos_dists[1]].detach().cpu().numpy() ), axis=0))
+            pos_pairs = np.stack((ex_mask[pos_mask].detach().cpu().numpy().reshape(-1,1),
+                                  ex_mask[pos_dists[1]].detach().cpu().numpy().reshape(-1,1),
+                                  pos_dists[0].detach().cpu().numpy().reshape(-1,1), 
+                                  np.zeros((len(ex_mask[pos_mask]),1)) ), axis=1)
+            pairings.append(pos_pairs)
             distances = torch.cat((distances,pos_dists[0]), dim=0)
 
             if len(neg_mask)<1:
@@ -89,24 +94,27 @@ class CustomRankingLoss(nn.MarginRankingLoss):
                 exp_dist = top_mark - rankings[ex_mask[neg_mask]] # expected distance
                 hard_neg = torch.max(torch.abs(F.pairwise_distance(emb_, embeddings[ex_mask[neg_mask]]) - exp_dist.to(torch.float32)),dim=0)
                 # save pairing and distance of hard negative
-                pairings += [ex_mask[positive].detach().cpu().numpy(),ex_mask[torch.max(hard_neg[1])].detach().cpu().numpy()]
+                pairings.append(np.array([ex_mask[positive].detach().cpu().numpy(),
+                                          ex_mask[torch.max(hard_neg[1])].detach().cpu().numpy(),
+                                          torch.max(hard_neg[0]).detach().cpu().numpy(), 1]))
                 distances = torch.cat( (distances, torch.tensor(torch.max(hard_neg[0])).unsqueeze(0)), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))
         self.pairings = pairings
-        return loss
+        return loss.pow(1/2) if self.rooting else loss # RMSE or MSE 
 
     def get_pairings(self):
         return self.pairings
 
 class CombinedLoss(CustomRankingLoss):
 
-    def __init__(self, cl_loss, weighting, supress_cl=6, margin=0., size_average=None, reduce=None, reduction='mean'):
+    def __init__(self, cl_loss, weighting, supress_cl=6, rooting=False, margin=0., size_average=None, reduce=None, reduction='mean'):
         super().__init__(size_average, reduce, reduction)
         self.margin = margin
         self.pairings = []
         self.weighting = weighting
         self.cl_loss = cl_loss
         self.supress_cl = supress_cl
+        self.rooting = rooting
 
     def forward(self, embeddings, preds, classes, rankings):
         weighting = torch.tensor(self.weighting)
