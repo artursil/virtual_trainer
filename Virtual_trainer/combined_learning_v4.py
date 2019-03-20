@@ -34,14 +34,13 @@ try:
 except OSError as e:
     if e.errno != errno.EEXIST:
         raise RuntimeError('Unable to create checkpoint directory:', 'checkpoint')
-CHECKPATH = '../../../artur-checkpoints' # 'checkpoint'
-
+CHECKPATH = 'checkpoint'
 
 # Data mountpoint
-DATAPOINT = "../../../Data"
+DATAPOINT = "Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = 'v4-RMSE-fixed'
-METRICSPATH = os.path.join('..','..','..','metrics',EXPERIMENT_NAME)
+EXPERIMENT_NAME = 'v4-RMSE-fixed_64'
+METRICSPATH = os.path.join('metrics',EXPERIMENT_NAME)
 
 
 try:
@@ -60,9 +59,9 @@ epochs = 10
 batch_size = 512
 n_chunks = 8
 weighting = 0.999 # classification loss weighting
-weighting_decay = 0.90 
+weighting_decay = 0.95 
 supress_cl = 6
-class_weight =[1.,1.,2.,2.,2.,2.,2.,2.]
+class_weight =[1.,1.,3.,3.,3.,3.,3.,3.]
 rmse = True
 
 
@@ -74,7 +73,9 @@ neptune.create_experiment(EXPERIMENT_NAME,
                                   'batch_size':batch_size,
                                   'lr':lr,
                                   'lr_decay':lr_decay,
-                                  'loss_margin': loss_margin
+                                  'loss_margin': loss_margin,
+                                  'class_weight': f'{class_weight}',
+                                  'emb_layer': '[128,64]',
                                   
                                   })
 
@@ -119,8 +120,7 @@ def train_epoch(model):
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
-        
-        
+        break
     return epoch_loss_train
 
 def evaluate_epoch(model):
@@ -244,7 +244,7 @@ action_ucf = [action if action!=8 else 6 for action in action_ucf]
 poses_ucf = [p for a,p in zip(action_ucf,poses_ucf) if a==6]
 action_ucf = [action for action in action_ucf if action==6]
 action_ucf, poses_ucf = action_ucf[:50], poses_ucf[:50]
-ratings_ucf = [0] * len(action_ucf)
+ratings_ucf = [9] * len(action_ucf)
 
 targets += action_ucf
 out_poses_2d += poses_ucf
