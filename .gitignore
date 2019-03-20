@@ -33,7 +33,7 @@ tags
 neptune_connector/
 # C extensions
 *.so
-
+metrics/
 # Distribution / packaging
 .Python
 build/
