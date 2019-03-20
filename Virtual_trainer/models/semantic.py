@@ -2,17 +2,129 @@
 @author: Ahmad Kurdi
 Model classes for Virtual Trainer portfolio project.
 DSR portfolio project with Artur Silicki
-Modifies Temporal CNN models from VideoPose3D
+Modifies Temporal CNN models from VideoPose3D + Quaternion utilities from Quaternet
 """
 
 import torch
 import torch.nn as nn
 from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel  
 
+def qmul(q, r):
+    """
+    Multiply quaternion(s) q with quaternion(s) r.
+    Expects two equally-sized tensors of shape (*, 4), where * denotes any number of dimensions.
+    Returns q*r as a tensor of shape (*, 4).
+    """
+    assert q.shape[-1] == 4
+    assert r.shape[-1] == 4
+    
+    original_shape = q.shape
+    
+    # Compute outer product
+    terms = torch.bmm(r.view(-1, 4, 1), q.view(-1, 1, 4))
+
+    w = terms[:, 0, 0] - terms[:, 1, 1] - terms[:, 2, 2] - terms[:, 3, 3]
+    x = terms[:, 0, 1] + terms[:, 1, 0] - terms[:, 2, 3] + terms[:, 3, 2]
+    y = terms[:, 0, 2] + terms[:, 1, 3] + terms[:, 2, 0] - terms[:, 3, 1]
+    z = terms[:, 0, 3] - terms[:, 1, 2] + terms[:, 2, 1] + terms[:, 3, 0]
+    return torch.stack((w, x, y, z), dim=1).view(original_shape)
+
+def qrot(q, v):
+    """
+    Rotate vector(s) v about the rotation described by quaternion(s) q.
+    Expects a tensor of shape (*, 4) for q and a tensor of shape (*, 3) for v,
+    where * denotes any number of dimensions.
+    Returns a tensor of shape (*, 3).
+    """
+    assert q.shape[-1] == 4
+    assert v.shape[-1] == 3
+    assert q.shape[:-1] == v.shape[:-1]
+    
+    original_shape = list(v.shape)
+    q = q.view(-1, 4)
+    v = v.view(-1, 3)
+    
+    qvec = q[:, 1:]
+    uv = torch.cross(qvec, v, dim=1)
+    uuv = torch.cross(qvec, uv, dim=1)
+    return (v + 2 * (q[:, :1] * uv + uuv)).view(original_shape)
+
+
+def rotate_seq(seq, vects):
+
+    # calculate euler angles
+    
+    e = (vects.permute(1,0)/ torch.norm(vects,dim=1)).permute(1,0)
+    x = torch.mul(e[:, 0],torch.tensor(-1))
+    y = torch.mul(e[:, 1],torch.tensor(-1))
+    z = torch.mul(e[:, 2],torch.tensor(-1))
+
+    # convert to quaternion order xyz
+    rx = torch.stack((torch.cos(x/2), torch.sin(x/2), torch.zeros_like(x), torch.zeros_like(x)), dim=1)
+    ry = torch.stack((torch.cos(y/2), torch.zeros_like(y), torch.sin(y/2), torch.zeros_like(y)), dim=1)
+    rz = torch.stack((torch.cos(z/2), torch.zeros_like(z), torch.zeros_like(z), torch.sin(z/2)), dim=1)
+    q = qmul(rx,ry)
+    q = torch.mul(qmul(q,rz),torch.tensor(1))
+
+    # apply sequentially for each item in batch
+    for i in range(seq.shape[0]):
+        shp_ = torch.tensor(seq[i].shape)
+        shp_[-1] = 4
+        q_ = q[i].repeat(tuple(shp_[:-1])).reshape(tuple(shp_))
+        seq[i] = qrot(q_, seq[i] )
+    return seq
+
+class SplitModel(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        self.class_model = class_model
+    def forward(self,x):
+        pred = self.class_model(x).permute(0,2,1)
+        embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
+        return embed, pred
+
+class SplitModel2(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        self.class_model = class_model
+        self.embed_layer = nn.Conv1d(128,64,1)
+    def forward(self,x):
+        pred = self.class_model(x).permute(0,2,1)
+        embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
+        return embed, pred
+
+class StandardiseKeypoints(nn.Module):
+    """
+    transformer for standardising 3D keypoints
+    """
+    def __init__(self, centering=True, orientate=False):
+        super().__init__()
+        self.centering = centering
+        self.orientate = orientate
+    
+    def rotate_(self,x):
+        direction_hip = x[:,0,4,:]
+        direction_spine = x[:,0,7,:]
+        x = rotate_seq(x,direction_hip) # orientate hips
+        x = rotate_seq(x,direction_spine) # orientate spine
+        return x
+        
+    def forward(self, x):
+        if self.centering:
+            x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
+        if self.orientate:
+            x = rotate_(x)
+        return x
 
 class HeadlessNet(nn.Module):
     """
-    Headless network
+    Headless network - legacy. Do not use
     """
     def __init__(self, class_model, pretrained_weights):
         super().__init__()
@@ -23,9 +135,36 @@ class HeadlessNet(nn.Module):
         x = self.embed_model(x)
         return x
 
+class HeadlessNet2(nn.Module):
+    """
+    Headless network
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        class_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+    def forward(self,x):
+        x = self.embed_model(x)
+        return x
 
+class RankingEmbedder(nn.Module):
+    def __init__(self,input_embed,embed_lens):
+        super().__init__()
+        modules = []
+        for i,layer in enumerate(embed_lens):
+            modules.append(nn.Linear(input_embed,layer))
+            input_embed = layer
+            if i != len(embed_lens) - 1:
+                modules.append(nn.ReLU())
+        self.linears = nn.ModuleList(modules)
+    def forward(self,x):        
+        x= x.permute(0,2,1).squeeze()
+        for module in self.linears:
+            x = module(x)
+        return x
+        
 
-class SiameseNet(HeadlessNet):
+class SiameseNet(HeadlessNet2):
     """
     Siamese network
     """
@@ -35,7 +174,7 @@ class SiameseNet(HeadlessNet):
         return x1, x2
 
 
-class TripletNet(HeadlessNet):
+class TripletNet(HeadlessNet2):
     """
     Triplet network
     """

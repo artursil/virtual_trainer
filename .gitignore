@@ -29,11 +29,13 @@ analytics/
 tags
 *.avi
 *.mp4
-outputs*
+*outputs*
+neptune_connector/
 # C extensions
 *.so
 txt_files/
 
+metrics/
 # Distribution / packaging
 .Python
 build/
