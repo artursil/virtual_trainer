@@ -206,7 +206,7 @@ checkp = torch.load('/checkpoint/combinedlearning-2nd-4.pth')
 epoch = checkp['epoch']+1
 model.load_state_dict(checkp['model_state_dict'])
 
-weighting *= (epoch-1)*weighting_decay
+weighting *= weighting_decay**(epoch-1)
 
 receptive_field = model.base.receptive_field()
 pad = (receptive_field - 1) 
