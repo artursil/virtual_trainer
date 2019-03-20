@@ -102,10 +102,11 @@ class VideoScraper:
             raise FileNotFoundError(f"{self.filepath}")
 
     def __duration_other(self):
+        filepath = self.filepath.replace('.avi','').replace('.mp4','')
         if self.quality=='avi':
-            file_with_ext=f"{self.filepath}.avi"
+            file_with_ext=f"{filepath}.avi"
         else:
-            file_with_ext = f"{self.filepath}.mp4"
+            file_with_ext = f"{filepath}.mp4"
         if os.path.isfile(file_with_ext):          
             vid = VideoFileClip(file_with_ext)
             duration = vid.duration
@@ -175,7 +176,7 @@ class VideoScraper:
 
     @classmethod
     def from_file(cls,file_path,exercise):
-        if file_path.find("avi")>-1:
+        if file_path.find(".avi")>-1:
             file_path = file_path.replace(".avi","")
             quality="avi"
         else:

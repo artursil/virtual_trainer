@@ -40,7 +40,7 @@ instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 ucf_file_test = os.path.join(DATAPOINT,'Keypoints','keypoints_rest_test.csv')
 # --- Parameters ---
-batch_size = 1024
+batch_size = 64
 epochs = 20
 embedding_len = 128
 lr, lr_decay = 0.001 , 0.95 
@@ -51,6 +51,7 @@ split_ratio = 0.2
 chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
 # model architecture
 filter_widths = [3,3,3]
+filter_widths2 = [7,7]
 channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 
@@ -79,16 +80,16 @@ vid_idx = [vid_idx[b] for b in balanced]
 classes = len(np.unique(actions))
 pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
 trn_model = NaiveStridedModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
-                                causal=True, dropout=0.25, channels=channels)
+                                causal=True, dropout=0.4, channels=channels,filter_widths2=filter_widths2)
 eval_model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
-                                causal=True, dropout=0.25, channels=channels)
+                                causal=True, dropout=0.25, channels=channels,filter_widths2=filter_widths2)
 
 train_params = list(trn_model.top_model.parameters())
-
-loss_fun = nn.CrossEntropyLoss(weight=torch.Tensor([1,1,2,2,2,2,2,2]).cuda())
+print(trn_model)
+loss_fun = nn.CrossEntropyLoss(weight=torch.Tensor([1,1,4,4,4,4,2,4]).cuda())
 optimizer = optim.Adam(train_params,lr, amsgrad=True)
 
-receptive_field = trn_model.base_model.receptive_field()
+receptive_field = trn_model.top_model.receptive_field()
 pad = (receptive_field - 1) 
 causal_shift = pad
 
@@ -100,17 +101,16 @@ if torch.cuda.is_available():
     trn_model = trn_model.cuda()
     eval_model = eval_model.cuda()
 
-checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-15.pth')
-epoch = checkp['epoch']+1
-losses_train = []
-losses_test = checkp['losses_test']
-validation_targets = checkp['validation_targets']
-trn_model.load_state_dict(checkp['model_state_dict'])
-# train model
-# epoch = 0
+# checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-77-epoch-9.pth')
+# epoch = checkp['epoch']+1
 # losses_train = []
-# losses_test = []
-# validation_targets = []
+# losses_test = checkp['losses_test']
+# validation_targets = checkp['validation_targets']
+# trn_model.load_state_dict(checkp['model_state_dict'])
+epoch = 0
+losses_train = []
+losses_test = []
+validation_targets = []
 
 while epoch < epochs:
     epoch_loss_train = [] 
@@ -169,7 +169,7 @@ while epoch < epochs:
             'losses_test': losses_test,
             'validation_targets' : validation_targets,
             'training_set' : vid_idx
-            }, os.path.join(CHECKPATH,f'Recipe-2-epoch-{epoch}.pth') )
+            }, os.path.join(CHECKPATH,f'Recipe-2-77-2-epoch-{epoch}.pth') )
 
     lr *= lr_decay
     for param_group in optimizer.param_groups:

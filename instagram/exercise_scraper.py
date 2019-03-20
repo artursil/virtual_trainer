@@ -6,11 +6,12 @@ import requests
 from bs4 import BeautifulSoup
 
 class ExerciseScraper():
-    def __init__(self,path,exercise_type):
+    def __init__(self,path,exercise_type,read_features=True):
         self.path = path
         self.exercise = exercise_type
-        self.__read_features()
         self.__get_txt_path()
+        if read_features:
+            self.__read_features()
 
     def __read_config(self):
         json_file_path = f'{self.path}/config_file.json'
@@ -178,7 +179,59 @@ class ExerciseScraper():
                 print(f"Wasn't able to get new url for shortcode: {shortcode}")
         return new_url
 
+    @classmethod
+    def from_file(cls,path,exercise):
+        return cls(path,exercise,False)
+
+    def save_filter_csv(self,url,ix):
+        filepath = f"{self.path}/txt_files/{self.exercise}_filtered_df.csv"
+        if os.path.isfile(filepath):
+            insta_df=pd.read_csv(filepath)
+        else:
+            insta_df = pd.DataFrame()
+
+        headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) \
+                     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36'}
+
+        page = requests.get(url,headers=headers)
+        soup = BeautifulSoup(page.content,'html.parser')
+
+        vid = soup.find('meta',{'property':'al:ios:url'}).get('content').split('=')[1]
+        shortcode = url.split('/p/')[1].replace('/','')
+        text = soup.title.text.replace('\n','')
+        tags = []
+        tags_list = soup.findAll('meta',{'property':'video:tag'})
+        for tag in tags_list:
+            tags.append(tag.get('content'))
+        video_url = soup.find('meta', attrs={'property': 'og:video'}).get('content')
+        exercise = self.exercise
+        filename = f"{ix}_{slugify(text)[:50]}"
+
+        insta_dict = {'id':vid,
+            'shortcode':shortcode,
+            'text':text,
+            'tags':str(tags),
+            'video_url':video_url,
+            'video_view_count':0,
+            'likes':0,
+            'exercise':self.exercise,
+            'reps':0,
+            'weight':0,
+            'filename':filename                               
+            }
+        insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
+        insta_df.to_csv(filepath,index=False) 
+
+    def __create_path(self,path):
+        if os.path.isdir(path):
+            pass
+        else:
+            os.makedirs(path,exist_ok=True)
+
     def download_videos(self,append):
+
+        print(f'{self.path}videos/{self.exercise}')
+        self.__create_path(f'{self.path}videos/{self.exercise}')
         self.__delete_duplicates()
         df = self.__read_download_files()
         if append==True:

@@ -19,7 +19,11 @@ EPOCHS=1
 
 
 
-def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
+def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,path_to_save='default'):
+    if path_to_save=='default':
+        path_to_save =f"{path.replace('clipped','processed')}/outputs_df.csv'"
+    else:
+        path_to_save = f'{path_to_save}/'
     weight_name = './openpose/weights/openpose_mpii_best.pth.tar'
     model = get_model('vgg19')     
     model.load_state_dict(torch.load(weight_name)['state_dict'])
@@ -48,23 +52,19 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
             X_full = X.squeeze(0).to(DEVICE)
             y = y.to(DEVICE).detach().cpu().numpy()
             bs = X_full.shape[0]
-            third_bs = bs//3
+            batch_size = 30
+            n_of_batches = bs//batch_size+1
             orig_images_full.squeeze_(0)
             frame_counter = -1
             clip_df = pd.DataFrame()
             rnd_images = [random.randint(0,X_full.shape[0]-1) for x in  range(3)]
             st_img = time.time()
-            for b in range(3):
-                if b==0:
-                    X = X_full[:third_bs,:,:,:]
-                    orig_images = orig_images_full.squeeze(0)[:third_bs,:,:,:]
-                elif b==1:
-                    X = X_full[third_bs:2*third_bs,:,:,:]
-                    orig_images = orig_images_full[third_bs:2*third_bs,:,:,:]
-                else:
-                    X = X_full[2*third_bs:,:,:,:]
-                    orig_images = orig_images_full[2*third_bs:,:,:,:]          
+            for b in range(n_of_batches):
+                X = X_full[batch_size*b:batch_size*(b+1),:,:,:]
+                orig_images = orig_images_full.squeeze(0)[batch_size*b:batch_size*(b+1),:,:,:]
 
+                if X.shape[0]==0:
+                    continue
                 predicted_outputs, _ = model(X)
         
                 output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
@@ -131,9 +131,8 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
                     df_dict.update(final_keypoints)
                     clip_df = clip_df.append(pd.DataFrame(df_dict,index=[0]),ignore_index=True)
                     
-                    
                     if save_img==True and frame_counter in rnd_images:
-                        save_picture(f"{path.replace('clipped','processed')}/{filename}_{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
+                        save_picture(f"{path_to_save}/{filename}_{ix}_{frame_counter}.png",personwiseKeypoints,keypoints_list,frameClone)
 
             exc_inter_list = [k for k,v in EXC_DICT.items() if v in EXC_INTER_FEET]
             if y[0][0] in exc_inter_list:
@@ -146,12 +145,12 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False):
             if save_img==True:
                 for f in rnd_images:
                     frame_clone = orig_images_full[f].detach().cpu().numpy()
-                    draw_interpolated(path,ix,f,clip_df,frame_clone,filename) 
+                    draw_interpolated(path,ix,f,clip_df,frame_clone,filename,path_to_save) 
 
 
             outputs_df = outputs_df.append(clip_df,ignore_index=True)
             if (ix+1) % 100==0:
-                outputs_df.to_csv(f"{path.replace('clipped','processed')}/outputs_df_{ix}.csv")
+                outputs_df.to_csv(f"{path_to_save}/outputs_df_{ix}.csv")
             if ix%50==0:
                 print(f"Time: {time.time()-st}")
-    outputs_df.to_csv(f"{path.replace('clipped','processed')}/outputs_df.csv")
+    outputs_df.to_csv(f"{path_to_save}/outputs_df.csv")
