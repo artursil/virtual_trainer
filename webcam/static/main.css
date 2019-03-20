@@ -1,0 +1,115 @@
+
+@import url(https://fonts.googleapis.com/css?family=BenchNine:700);
+
+h1 {
+  font-family: "Avant Garde", Avantgarde, "Century Gothic", CenturyGothic, "AppleGothic", sans-serif;
+  font-size: 55px;
+  padding: 40px 30px;
+  text-align: center;
+  text-transform: uppercase;
+  text-rendering: optimizeLegibility;
+    color: #e0dfdc;
+    background-color: #333;
+    letter-spacing: .1em;
+    text-shadow: 
+      0 -1px 0 #fff, 
+      0 1px 0 #2e2e2e, 
+      0 2px 0 #2c2c2c, 
+      0 3px 0 #2a2a2a, 
+      0 4px 0 #282828, 
+      0 5px 0 #262626, 
+      0 6px 0 #242424, 
+      0 7px 0 #222, 
+      0 8px 0 #202020, 
+      0 9px 0 #1e1e1e, 
+      0 10px 0 #1c1c1c, 
+      0 11px 0 #1a1a1a, 
+      0 12px 0 #181818, 
+      0 13px 0 #161616, 
+      0 14px 0 #141414, 
+      0 15px 0 #121212, 
+      0 22px 30px rgba(0, 0, 0, 0.9);
+}
+
+
+.snip1562 {
+  background-color: #4b4471;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-block;
+  font-family: 'BenchNine', Arial, sans-serif;
+  font-size: 1em;
+  font-size: 32px;
+
+  line-height: 1em;
+  margin: 15px 110px;
+  outline: none;
+  padding: 12px 40px 10px;
+  position: relative;
+  text-transform: uppercase;
+  font-weight: 700;
+
+}
+
+.snip1562:before,
+.snip1562:after {
+  border-color: #4b4471;
+  -webkit-transition: all 0.25s;
+  transition: all 0.25s;
+  border-style: solid;
+  border-width: 0;
+  content: "";
+  height: 24px;
+  position: absolute;
+  width: 24px;
+}
+
+.snip1562:before {
+  border-color: #4b4471;
+  border-left-width: 4px;
+  border-top-width: 4px;
+  left: -5px;
+  top: -5px;
+}
+
+.snip1562:after {
+  border-bottom-width: 4px;
+  border-color: #4b4471;
+  border-right-width: 4px;
+  bottom: -5px;
+  right: -5px;
+}
+
+.snip1562:hover,
+.snip1562.hover {
+  background-color: #c53f31;
+}
+
+.snip1562:hover:before,
+.snip1562.hover:before,
+.snip1562:hover:after,
+.snip1562.hover:after {
+  border-color: #d83625;
+  height: 100%;
+  width: 100%;
+}
+
+
+/* Demo purposes only */
+body {
+
+/* background-image: url("gym.jpg"); */
+
+  background-color: #212121;
+}
+.videostream{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 40%;
+}
+.button-wrapper{
+  max-width:500px;
+  margin:auto;
+}        
