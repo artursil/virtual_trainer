@@ -88,7 +88,7 @@ class CustomRankingLoss(nn.MarginRankingLoss):
             pos_pairs = np.stack((rankings[ex_mask[pos_mask]].detach().cpu().numpy().reshape(-1,1),
                                   rankings[ex_mask[pos_dists[1]]].detach().cpu().numpy().reshape(-1,1),
                                   pos_dists[0].detach().cpu().numpy().reshape(-1,1), 
-                                  np.zeros((len(ex_mask[pos_mask]),1)) ), axis=1)
+                                  np.tile(ex_class.detach().cpu().numpy(),(len(ex_mask[pos_mask]),1) ) ), axis=1)
             
             pairings.append(pos_pairs)
             distances = torch.cat((distances,pos_dists[0]), dim=0)
@@ -102,7 +102,8 @@ class CustomRankingLoss(nn.MarginRankingLoss):
                 # save pairing and distance of hard negative
                 pairings.append(np.array([rankings[ex_mask[positive]].detach().cpu().numpy(),
                                           rankings[ex_mask[torch.max(hard_neg[1])]].detach().cpu().numpy(),
-                                          torch.max(hard_neg[0]).detach().cpu().numpy(), 1]))
+                                          torch.max(hard_neg[0]).detach().cpu().numpy(), 
+                                          ex_class.detach().cpu().numpy()]))
                 distances = torch.cat( (distances, torch.tensor(torch.max(hard_neg[0])).unsqueeze(0)), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))
         self.pairings = pairings
