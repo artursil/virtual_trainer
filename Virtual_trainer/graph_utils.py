@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from bokeh.io import get_screenshot_as_png
+from bokeh.io.export import get_screenshot_as_png
 from bokeh.palettes import magma
 from bokeh.transform import jitter
 from bokeh.layouts import widgetbox
