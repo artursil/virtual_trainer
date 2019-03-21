@@ -80,10 +80,16 @@ class CustomRankingLoss(nn.MarginRankingLoss):
             neg_mask = torch.nonzero(torch.where(rankings[ex_mask] == top_mark,my_zero,my_one))[:,0]
             pos_dists = torch.max(dist_mat(embeddings[ex_mask[pos_mask]]),dim=1)# find hard positives
             # save pairings and distances for positives
-            pos_pairs = np.stack((ex_mask[pos_mask].detach().cpu().numpy().reshape(-1,1),
-                                  ex_mask[pos_dists[1]].detach().cpu().numpy().reshape(-1,1),
+            #pos_pairs = np.stack((ex_mask[pos_mask].detach().cpu().numpy().reshape(-1,1),
+            #                      ex_mask[pos_dists[1]].detach().cpu().numpy().reshape(-1,1),
+            #                      pos_dists[0].detach().cpu().numpy().reshape(-1,1), 
+            #                      np.zeros((len(ex_mask[pos_mask]),1)) ), axis=1)
+            
+            pos_pairs = np.stack((rankings[ex_mask[pos_mask]].detach().cpu().numpy().reshape(-1,1),
+                                  rankings[ex_mask[pos_dists[1]]].detach().cpu().numpy().reshape(-1,1),
                                   pos_dists[0].detach().cpu().numpy().reshape(-1,1), 
                                   np.zeros((len(ex_mask[pos_mask]),1)) ), axis=1)
+            
             pairings.append(pos_pairs)
             distances = torch.cat((distances,pos_dists[0]), dim=0)
 
@@ -94,8 +100,8 @@ class CustomRankingLoss(nn.MarginRankingLoss):
                 exp_dist = top_mark - rankings[ex_mask[neg_mask]] # expected distance
                 hard_neg = torch.max(torch.abs(F.pairwise_distance(emb_, embeddings[ex_mask[neg_mask]]) - exp_dist.to(torch.float32)),dim=0)
                 # save pairing and distance of hard negative
-                pairings.append(np.array([ex_mask[positive].detach().cpu().numpy(),
-                                          ex_mask[torch.max(hard_neg[1])].detach().cpu().numpy(),
+                pairings.append(np.array([rankings[ex_mask[positive]].detach().cpu().numpy(),
+                                          rankings[ex_mask[torch.max(hard_neg[1])]].detach().cpu().numpy(),
                                           torch.max(hard_neg[0]).detach().cpu().numpy(), 1]))
                 distances = torch.cat( (distances, torch.tensor(torch.max(hard_neg[0])).unsqueeze(0)), dim=0)
         loss = torch.mean(F.relu(distances-self.margin).pow(2))

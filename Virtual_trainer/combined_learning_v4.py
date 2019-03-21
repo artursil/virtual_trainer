@@ -55,7 +55,7 @@ loss_margin = 0.3
 seed = 1234
 lr, lr_decay = 0.001 , 0.95 
 split_ratio = 0.2
-epochs = 10
+epochs = 5
 batch_size = 512
 n_chunks = 8
 weighting = 0.999 # classification loss weighting
@@ -163,7 +163,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairin
             }, os.path.join(CHECKPATH,f'combinedlearning-{EXPERIMENT_NAME}-{epoch}.pth') )
 
     # prepare charts
-    prepare_plots(pairings, val_targets, epoch, METRICSPATH)
+    prepare_plots2(pairings, val_targets, epoch, METRICSPATH)
 
 
 
