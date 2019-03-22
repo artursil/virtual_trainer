@@ -83,6 +83,13 @@ def openpose_feed():
     return Response(gen_model(predict_cl),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/kp_array')
+def get_nparray():
+    # serialises the 3d keypoints
+    kp3d = predict_cl.kp_buff.astype('float32')
+    response = flask.make_response(kp3d.tobytes())
+    response.headers.set('Content-Type', 'application/octet-stream')
+    return response
 
 if __name__ == '__main__':
     app.run(host='localhost', threaded=True)

@@ -107,6 +107,7 @@ class StandardiseKeypoints(nn.Module):
         super().__init__()
         self.centering = centering
         self.orientate = orientate
+        self.kp_buff = None
     
     def rotate_(self,x):
         direction_hip = x[:,0,4,:]
@@ -114,12 +115,16 @@ class StandardiseKeypoints(nn.Module):
         x = rotate_seq(x,direction_hip) # orientate hips
         x = rotate_seq(x,direction_spine) # orientate spine
         return x
+
+    def get_3dkeys(self):
+        return self.kp_buff
         
     def forward(self, x):
         if self.centering:
             x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
         if self.orientate:
             x = rotate_(x)
+        self.kp_buff = x.detach().cpu().numpy()
         return x
 
 class HeadlessNet(nn.Module):

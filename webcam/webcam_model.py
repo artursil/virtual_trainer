@@ -77,6 +77,8 @@ class ModelClass(object):
 
         self.clip_df = pd.DataFrame()
 
+        self.kp_buff = None
+
     def __del__(self):
         self.video.release()
 
@@ -198,6 +200,10 @@ class ModelClass(object):
             embeds, preds = model(poses)
             # print(f'Preds shape:{preds.shape}')
             # print(preds)
+
+            #load 3d keypoints from transformer layer
+            self.kp_buff = model.transform.get_3dkeys()
+
             softmax = torch.nn.Softmax(1)
             pred= softmax(preds)
             pred = pred.detach().cpu().numpy().squeeze()
