@@ -123,6 +123,7 @@ class CombinedLoss(CustomRankingLoss):
         self.cl_loss = cl_loss
         self.supress_cl = supress_cl
         self.rooting = rooting
+        self.metrics = None
 
     def forward(self, embeddings, preds, classes, rankings):
         weighting = torch.tensor(self.weighting)
@@ -145,8 +146,8 @@ class CombinedLoss(CustomRankingLoss):
         rankloss = self.forward_(embeddings[mask], classes[mask], rankings[mask])
         rank_method = "RMSE" if self.rooting else "MSE"
         print(f"Unweighted losses: Classification C/E {classloss} , Ranking {rank_method} {rankloss}")
-        neptune.send_metric('classification_CE', classloss)
-        neptune.send_metric(f'Ranking_{rank_method}', rankloss)
+        self.metrics = ( classloss.detach().cpu().numpy() , rankloss.detach().cpu().numpy(), weighting )
+        
         # scale by weighting
         if torch.cuda.is_available():
             weighting = weighting.cuda()
@@ -157,3 +158,5 @@ class CombinedLoss(CustomRankingLoss):
     def set_weighting(self, weighting):
         assert weighting < 1
         self.weighting = weighting
+    def get_metrics(self):
+        return self.metrics

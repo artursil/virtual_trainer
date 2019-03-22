@@ -53,7 +53,7 @@ except OSError as e:
 
 loss_margin = 0.3
 seed = 1234
-lr, lr_decay = 0.001 , 0.95 
+lr, lr_decay = 0.01 , 0.95 
 split_ratio = 0.2
 epochs = 5
 batch_size = 512
@@ -120,6 +120,10 @@ def train_epoch(model):
         embeds, preds = model(X)
         batch_loss = loss_fun(embeds, preds, classes, rankings)
         neptune.send_metric('batch_loss', batch_loss)
+        cl_loss, rk_loss, cur_weight = loss_fun.get_metrics()
+        neptune.send_metric('classification_training_loss', cl_loss)
+        neptune.send_metric('Ranking_training_loss', rk_loss)
+        neptune.send_metric('current_weighting', cur_weight)
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
@@ -141,6 +145,9 @@ def evaluate_epoch(model):
                 rankings = rankings.cuda()
             embeds, preds = model(X)
             batch_loss = loss_fun(embeds, preds, classes, rankings)
+            cl_loss, rk_loss, _ = loss_fun.get_metrics()
+            neptune.send_metric('classification_validation_loss', cl_loss)
+            neptune.send_metric('Ranking_validation_loss', rk_loss)
             pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()]))
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             targets.append( (classes_np,rankings_np,preds.detach().cpu().numpy().squeeze(),
