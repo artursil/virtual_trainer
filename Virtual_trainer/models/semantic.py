@@ -90,10 +90,10 @@ class SplitModel2(nn.Module):
     """
     split output
     """
-    def __init__(self, class_model):
+    def __init__(self, class_model, feats_in, feats_out):
         super().__init__()
         self.class_model = class_model
-        self.embed_layer = nn.Conv1d(128,64,1)
+        self.embed_layer = nn.Conv1d(feats_in,feats_out,1)
     def forward(self,x):
         pred = self.class_model(x).permute(0,2,1)
         embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
@@ -107,6 +107,7 @@ class StandardiseKeypoints(nn.Module):
         super().__init__()
         self.centering = centering
         self.orientate = orientate
+        self.kp_buff = None
     
     def rotate_(self,x):
         direction_hip = x[:,0,4,:]
@@ -120,7 +121,11 @@ class StandardiseKeypoints(nn.Module):
             x-= x[:,0,0,:].unsqueeze(1).unsqueeze(1)
         if self.orientate:
             x = rotate_(x)
+        self.kp_buff = x.detach().cpu().numpy()
         return x
+
+    def get_kp(self):
+        return self.kp_buff
 
 class HeadlessNet(nn.Module):
     """

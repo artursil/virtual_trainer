@@ -172,7 +172,7 @@ def prepare_plots2(pairings,target_vals,epoch, METRICSPATH):
     pil_image2 = get_screenshot_as_png(p)
     neptune.send_image('rank_distances', pil_image2)
 
-    pair_df = pd.DataFrame(data={ 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file)
+    pair_df = pd.DataFrame(data={ 'class': pair_class, 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file, index=False)
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
