@@ -31,6 +31,7 @@ tags
 *.mp4
 *outputs*
 neptune_connector/
+node_modules/
 # C extensions
 *.so
 metrics/

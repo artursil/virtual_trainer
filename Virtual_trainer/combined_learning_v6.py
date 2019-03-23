@@ -234,12 +234,12 @@ model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, f
 
 epoch=1
 
-resume_cp = os.path.join(CHECKPATH,'combinedlearning-v5-533-rank_embed-128-9.pth')
+resume_cp = os.path.join(CHECKPATH,'combinedlearning-v6-SGD-12.pth')
 checkp = torch.load(resume_cp)
 epoch = checkp['epoch']+1
 model.load_state_dict(checkp['model_state_dict'])
 
-weighting = 0.8
+weighting = 0.6859
 
 receptive_field = model.embedding.embed_model.receptive_field()
 pad = (receptive_field - 1) 
