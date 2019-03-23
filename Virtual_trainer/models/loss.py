@@ -171,7 +171,7 @@ class CustomRankingLoss2(CustomRankingLoss):
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
-        clip_val = torch.tensor(5)
+        clip_val = torch.tensor(5.)
         if torch.cuda.is_available():
             my_empty = my_empty.cuda()
             my_one = my_one.cuda()
