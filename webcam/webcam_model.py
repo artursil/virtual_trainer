@@ -179,7 +179,7 @@ class ModelClass(object):
         chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
         model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
         
-        pretrained = torch.load('../../virtual_trainer/Virtual_trainer/checkpoint/combinedlearning-2nd_part2-5.pth')
+        pretrained = torch.load('../../virtual_trainer/Virtual_trainer/checkpoint/combinedlearning2-5.pth')
         model.load_state_dict(pretrained['model_state_dict'])
 
         with torch.no_grad():
@@ -196,6 +196,9 @@ class ModelClass(object):
             poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
             # print(f'Poses shape: {poses.shape}')
             embeds, preds = model(poses)
+            kp_3d = model.transform.get_kp()
+            n_frames = kp_3d.shape[1]
+            kp_3d = kp_3d.reshape(-1)
             # print(f'Preds shape:{preds.shape}')
             # print(preds)
             softmax = torch.nn.Softmax(1)
@@ -212,4 +215,4 @@ class ModelClass(object):
             # msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
             self.prediction = EXC_DICT[values[ind]]
             print(self.prediction)
-            return self
+            return kp_3d, n_frames
