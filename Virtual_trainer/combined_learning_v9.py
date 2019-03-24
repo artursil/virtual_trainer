@@ -206,7 +206,7 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, fil
           ('base', base) ,
           ('transform', StandardiseKeypoints(True,False)),
           ('embedding', HeadlessNet2(top)),
-          ('classifier', SplitModel2(class_mod,embedding_len,128) )
+          ('classifier', SplitModel3(class_mod,[128,64,32],7) )
         ]))
     return model  
 
