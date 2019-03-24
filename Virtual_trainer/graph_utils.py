@@ -222,7 +222,7 @@ def prepare_plots3(target_vals,epoch, METRICSPATH):
         if cl == 6:
             continue
         df2 = df.loc[df['class']==cl]
-        p.circle(x='tar', y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
+        p.circle(x=jitter('tar',0.3), y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
         p.line(x='tar', y='pred', line_width=2, alpha=0.5, color=palette[cl],legend=class_names[cl], source=df2.groupby(by="tar").mean())
     p.legend.location = "top_left"
     p.legend.click_policy="hide"
@@ -231,7 +231,6 @@ def prepare_plots3(target_vals,epoch, METRICSPATH):
     pil_image2 = get_screenshot_as_png(p)
     neptune.send_image('rank_distances', pil_image2)
 
-    pair_df = pd.DataFrame(data={ 'class': pair_class, 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file, index=False)
 
 
 def plot_confusion_matrix(cm, classes,
