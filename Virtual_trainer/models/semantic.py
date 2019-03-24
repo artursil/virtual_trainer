@@ -110,9 +110,8 @@ class SplitModel3(nn.Module):
     """
     split output
     """
-    def __init__(self, headless_model, feat_list, num_classes):
+    def __init__(self, feat_list, num_classes):
         super().__init__()
-        self.base_model = headless_model
         classifier = []
         regressor = []
         for feat_in, feat_out in pairwise(feat_list):
