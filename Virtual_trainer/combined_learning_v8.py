@@ -55,14 +55,14 @@ loss_margin = 0.3
 seed = 1234
 lr, lr_decay = 0.001 , 0.95 
 split_ratio = 0.2
-epochs, freeze_e = 10, 3
+epochs, freeze_e = 12, 4
 batch_size = 512
 n_chunks = 8
 weighting = 0.999 # classification loss weighting
 weighting_decay = 0.95 
 supress_cl = 6
-class_weight =[1.,1.,3.,3.,3.,3.,3.,3.]
-rmse = True
+class_weight =[1.,1.,4.,4.,4.,4.,2.,4.]
+rmse = False
 
 
 neptune.init(api_token=NEPTUNE_TOKEN,
@@ -233,7 +233,7 @@ embedding_len = 128
 classes=8
 
 # --- params ---
-pretrained = os.path.join(CHECKPATH,"Recipe-2-embedvariant-128-epoch-4.pth") # pretrained base
+pretrained = os.path.join(CHECKPATH,"Recipe-2-embedvariant-128-epoch-8.pth") # pretrained base
 kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
 kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
 rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file

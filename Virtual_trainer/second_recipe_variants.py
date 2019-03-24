@@ -32,7 +32,7 @@ CHECKPATH = 'checkpoint'
 # Data mountpoint
 DATAPOINT = "../../../Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = f'recipe2-variants'
+EXPERIMENT_NAME = f'recipe2-variants-fix'
 #METRICSPATH = os.path.join('..','..','..','metrics',EXPERIMENT_NAME)
 
 # --- Datasets ---
@@ -114,13 +114,14 @@ for batch_size, filter_widths2 , embedding_len in zip(batch_variant, filter_vari
         trn_model = trn_model.cuda()
         eval_model = eval_model.cuda()
 
-# checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-77-epoch-9.pth')
-# epoch = checkp['epoch']+1
-# losses_train = []
-# losses_test = checkp['losses_test']
-# validation_targets = checkp['validation_targets']
-# trn_model.load_state_dict(checkp['model_state_dict'])
-    epoch = 0
+    resumepath = os.path.join(CHECKPATH,'Recipe-2-embedvariant-128-epoch-4.pth')
+    checkp = torch.load(resumepath)
+    epoch = checkp['epoch']+1 
+    losses_train = []
+    losses_test = checkp['losses_test']
+    validation_targets = checkp['validation_targets']
+    trn_model.load_state_dict(checkp['model_state_dict'])
+    #epoch = 0
     losses_train = []
     losses_test = []
     validation_targets = []
@@ -195,7 +196,7 @@ for batch_size, filter_widths2 , embedding_len in zip(batch_variant, filter_vari
                     'losses_test': losses_test,
                     'validation_targets' : validation_targets,
                     'training_set' : vid_idx
-                    }, os.path.join(CHECKPATH,f'Recipe-2-channelvariant-{channels2}-epoch-{epoch}.pth') )
+                    }, os.path.join(CHECKPATH,f'Recipe-2-channelvariant-{embedding_len}-epoch-{epoch}.pth') )
 
         lr *= lr_decay
         for param_group in optimizer.param_groups:
@@ -204,4 +205,5 @@ for batch_size, filter_widths2 , embedding_len in zip(batch_variant, filter_vari
         generator.next_epoch()  
     # close neptune token
     neptune.stop()
+    break
       
