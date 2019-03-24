@@ -125,7 +125,7 @@ class SplitModel3(nn.Module):
         self.regressor = nn.ModuleList(regressor)
     def forward(self,x):
         x_class = x.permute(0,2,1).squeeze()
-        x_rank = x_class.copy()
+        x_rank = x_class.clone()
         for cl_l, rk_l in zip(self.classifier, self.regressor):
             x_class = cl_l(x_class)
             x_rank = rk_l(x_rank)

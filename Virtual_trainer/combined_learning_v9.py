@@ -19,7 +19,7 @@ import numpy as np
 from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
 import neptune
 from neptune_connector.np_config import NEPTUNE_TOKEN
-from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel
+from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel3
 from models.loss import  CombinedLoss3
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator, SimpleSiameseGenerator
@@ -61,6 +61,7 @@ n_chunks = 8
 weighting = 0.999 # classification loss weighting
 weighting_decay = 0.95 
 supress_cl = 6 
+freeze_e = 5
 
 
 neptune.init(api_token=NEPTUNE_TOKEN,
@@ -71,7 +72,6 @@ neptune.create_experiment(EXPERIMENT_NAME,
                                   'batch_size':batch_size,
                                   'lr':lr,
                                   'lr_decay':lr_decay,
-                                  'class_weight': f'{class_weight}',
                                   'emb_layer': '[128,128]',
                                   'optimiser': 'adam'
                                   
@@ -80,16 +80,25 @@ neptune.create_experiment(EXPERIMENT_NAME,
 
 def train_model(model,epoch_start, epochs,lr,lr_decay,weighting,weighting_decay):
     loss_tuple = []
+    for param in list(model.embedding.parameters()):
+        param.requires_grad = False
+
     for epoch in range(epoch_start,epochs+1):
+        
+        if epoch == freeze_e :
+            print("Model unfrozen")
+            for param in list(model.embedding.parameters()):
+                param.requires_grad = True
+
         if torch.cuda.is_available():
             model.cuda()
         print(f"Starting epoch {epoch}")
         st = time.time()
         epoch_loss_train = train_epoch(model)
         print(f"Epoch {epoch}: Training complete, beginning evaluation")
-        epoch_loss_test, val_targets, pairings = evaluate_epoch(model)
-        log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairings)
-        loss_tuple.append(pairings)
+        epoch_loss_test, val_targets= evaluate_epoch(model)
+        log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets)
+        # loss_tuple.append(pairings)
         lr *= lr_decay
         
         weighting *= weighting_decay
@@ -107,7 +116,7 @@ def train_epoch(model):
 
         X = torch.from_numpy(X.astype('float32'))
         classes = torch.from_numpy(classes.astype('long'))
-        rankings = torch.from_numpy(rankings.astype('long'))
+        rankings = torch.from_numpy(rankings.astype('float32'))
         if torch.cuda.is_available():
             X = X.cuda()
             classes = classes.cuda()
@@ -124,7 +133,7 @@ def train_epoch(model):
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
-        
+        break
     return epoch_loss_train
 
 def evaluate_epoch(model):
@@ -135,24 +144,25 @@ def evaluate_epoch(model):
         for X, classes_np, rankings_np in generator.next_validation():
             X = torch.from_numpy(X.astype('float32'))
             classes = torch.from_numpy(classes_np.astype('long'))
-            rankings = torch.from_numpy(rankings_np.astype('long'))
+            rankings = torch.from_numpy(rankings_np.astype('float32'))
             if torch.cuda.is_available():
                 X = X.cuda()
                 classes = classes.cuda()
                 rankings = rankings.cuda()
             embeds, preds = model(X)
+
             batch_loss = loss_fun(embeds, preds, classes, rankings)
             cl_loss, rk_loss, _ = loss_fun.get_metrics()
             neptune.send_metric('classification_validation_loss', cl_loss)
             neptune.send_metric('Ranking_validation_loss', rk_loss)
-            pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()]))
+            # pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()]))
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             targets.append( (classes_np,rankings_np,preds.detach().cpu().numpy().squeeze(),
-                            embeds.detach().cpu().numpy().squeeze()) )     
-            
-    return epoch_loss_test, targets, pairings
+                            embeds.detach().cpu().numpy().squeeze()) )
+            break 
+    return epoch_loss_test, targets
 
-def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairings):  
+def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairings=None):  
     losses_train.append(epoch_loss_train)
     losses_test.append(epoch_loss_test)
     
@@ -170,7 +180,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairin
             }, os.path.join(CHECKPATH,f'combinedlearning-{EXPERIMENT_NAME}-{epoch}.pth') )
 
     # prepare charts
-    prepare_plots2(pairings, val_targets, epoch, METRICSPATH)
+    prepare_plots2( val_targets, epoch, METRICSPATH)
 
 
 
@@ -206,7 +216,7 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, fil
           ('base', base) ,
           ('transform', StandardiseKeypoints(True,False)),
           ('embedding', HeadlessNet2(top)),
-          ('classifier', SplitModel3(class_mod,[128,64,32],7) )
+          ('classifier', SplitModel3([128,64,32],classes) )
         ]))
     return model  
 
@@ -226,9 +236,16 @@ rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 # non exercise class id to supress from ranking loss
 
-model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
+model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, filter_widths, causal, channels, embedding_len,classes)
 
 epoch=1
+
+resume_cp = os.path.join(CHECKPATH,'combinedlearning-simple-regressor-classifier-2.pth')
+checkp = torch.load(resume_cp)
+epoch = checkp['epoch']+1
+model.load_state_dict(checkp['model_state_dict'])
+
+weighting *= weighting_decay**(epoch-1)
 
 receptive_field = model.base.receptive_field()
 pad = (receptive_field - 1) 
