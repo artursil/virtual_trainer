@@ -171,7 +171,7 @@ class CustomRankingLoss2(CustomRankingLoss):
         my_zero = torch.zeros(1)
         my_one = torch.ones(1)
         my_empty = torch.empty((0))
-        clip_val = torch.tensor(5)
+        clip_val = torch.tensor(5.)
         if torch.cuda.is_available():
             my_empty = my_empty.cuda()
             my_one = my_one.cuda()
@@ -272,3 +272,43 @@ class CombinedLoss2(CustomRankingLoss2):
     def get_metrics(self):
         return self.metrics
 
+
+class CombinedLoss3(nn.MarginRankingLoss):
+
+    def __init__(self, cl_loss,rank_loss, weighting, rooting= False, margin=0., size_average=None, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.margin = margin
+        self.pairings = []
+        self.weighting = weighting
+        self.cl_loss = cl_loss
+        self.rank_loss = rank_loss
+        self.rooting = rooting
+        self.metrics = None
+
+    def forward(self, rank_preds,class_preds, classes, rankings):
+        weighting = torch.tensor(self.weighting)
+        class_preds = class_preds.squeeze()
+        rank_preds = rank_preds.squeeze()
+        classes = classes.squeeze()
+        rankings = rankings.squeeze()
+        # take classification loss
+        classloss = self.cl_loss(class_preds,classes)
+        
+        # take ranking loss
+        rankloss = self.rank_loss(rank_preds,rankings)
+        rank_method = "RMSE" if self.rooting else "MSE"
+        print(f"Unweighted losses: Classification C/E {classloss} , Ranking {rank_method} {rankloss}")
+        self.metrics = ( classloss.detach().cpu().numpy() , rankloss.detach().cpu().numpy(), weighting )
+        
+        # scale by weighting
+        if torch.cuda.is_available():
+            weighting = weighting.cuda()
+        loss = torch.mul(rankloss, (1-weighting)) + torch.mul(classloss, weighting) 
+
+        return loss
+    
+    def set_weighting(self, weighting):
+        assert weighting < 1
+        self.weighting = weighting
+    def get_metrics(self):
+        return self.metrics
