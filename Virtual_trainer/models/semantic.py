@@ -7,7 +7,14 @@ Modifies Temporal CNN models from VideoPose3D + Quaternion utilities from Quater
 
 import torch
 import torch.nn as nn
-from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel  
+from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel
+from itertools import tee
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 def qmul(q, r):
     """
@@ -96,8 +103,34 @@ class SplitModel2(nn.Module):
         self.embed_layer = nn.Conv1d(feats_in,feats_out,1)
     def forward(self,x):
         pred = self.class_model(x).permute(0,2,1)
-        embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
+        embed = self.embed_layer(x).permute(0,2,1) # conv produces 1*128 , want flat 128
         return embed, pred
+
+class SplitModel3(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, headless_model, feat_list, num_classes):
+        super().__init__()
+        self.base_model = headless_model
+        classifier = []
+        regressor = []
+        for feat_in, feat_out in pairwise(feat_list):
+            classifier.append(nn.Linear(feat_in,feat_out))
+            regressor.append(nn.Linear(feat_in,feat_out))
+            classifier.append(nn.ReLU())
+            regressor.append(nn.ReLU())
+        classifier.append(nn.Linear(feat_list[-1],num_classes))
+        regressor.append(nn.Linear(feat_list[-1],1))
+        self.classifier = nn.ModuleList(classifier)
+        self.regressor = nn.ModuleList(regressor)
+    def forward(self,x):
+        x_class = x.permute(0,2,1).squeeze()
+        x_rank = x_class.copy()
+        for cl_l, rk_l in zip(self.classifier, self.regressor):
+            x_class = cl_l(x_class)
+            x_rank = rk_l(x_rank)
+        return x_rank, x_class
 
 class StandardiseKeypoints(nn.Module):
     """
