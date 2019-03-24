@@ -133,7 +133,6 @@ def train_epoch(model):
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
-        break
     return epoch_loss_train
 
 def evaluate_epoch(model):
@@ -159,7 +158,6 @@ def evaluate_epoch(model):
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             targets.append( (classes_np,rankings_np,preds.detach().cpu().numpy().squeeze(),
                             embeds.detach().cpu().numpy().squeeze()) )
-            break 
     return epoch_loss_test, targets
 
 def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairings=None):  
@@ -180,7 +178,7 @@ def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairin
             }, os.path.join(CHECKPATH,f'combinedlearning-{EXPERIMENT_NAME}-{epoch}.pth') )
 
     # prepare charts
-    prepare_plots2( val_targets, epoch, METRICSPATH)
+    prepare_plots3( val_targets, epoch, METRICSPATH)
 
 
 
