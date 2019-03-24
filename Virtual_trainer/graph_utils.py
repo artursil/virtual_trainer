@@ -174,6 +174,66 @@ def prepare_plots2(pairings,target_vals,epoch, METRICSPATH):
 
     pair_df = pd.DataFrame(data={ 'class': pair_class, 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file, index=False)
 
+
+def prepare_plots3(target_vals,epoch, METRICSPATH):
+
+    cfm_file = f"{METRICSPATH}/confusion-{epoch}.png"
+    bok_file = f"{METRICSPATH}/ranking_{epoch}.html"
+   
+
+    classes, rankings, preds, pred_rank = [],[],[],[]
+    
+    for t_ in target_vals:
+        cl_,ra_,pr_,em_ = t_
+        classes.append(cl_)
+        rankings.append(ra_)
+        preds.append(pr_)
+        pred_rank.append(em_)
+
+
+
+    classes = np.squeeze(np.concatenate(classes))
+    rankings = np.squeeze(np.concatenate(rankings))
+    predictions = np.concatenate([softmax(p,axis=0) for p in preds])
+    pred_rank = np.concatenate(pred_rank)
+    
+    activations = np.argmax(predictions,axis=1) 
+    conf_mat = confusion_matrix(classes,activations)
+    fig = plt.figure(figsize=[10,8])
+    plot_confusion_matrix(conf_mat, classes=class_names, normalize=False,
+                      title=f'Confusion matrix epoch {epoch}')
+    plt.savefig(cfm_file,format="png")
+    pil_image = fig2pil(fig)
+    neptune.send_image('conf_mat', pil_image)
+
+
+    df = pd.DataFrame(data={ 'tar': rankings, 'pred': pred_rank, 'class': classes})
+
+    
+    palette = magma(num_of_classes + 1)
+    p = figure(plot_width=600, plot_height=800, title=f"Ranking by exercise, epoch {epoch}")
+    p.xgrid.grid_line_color = None
+    p.xaxis.axis_label = 'Target ranking'
+    p.yaxis.axis_label = 'Predicted ranking'
+    
+
+    
+    for cl in range(num_of_classes):
+        if cl == 6:
+            continue
+        df2 = df.loc[df['class']==cl]
+        p.circle(x='tar', y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
+        p.line(x='tar', y='pred', line_width=2, alpha=0.5, color=palette[cl],legend=class_names[cl], source=df2.groupby(by="tar").mean())
+    p.legend.location = "top_left"
+    p.legend.click_policy="hide"
+    output_file(bok_file, title="Ranking by exercise")
+    save(p)
+    pil_image2 = get_screenshot_as_png(p)
+    neptune.send_image('rank_distances', pil_image2)
+
+    pair_df = pd.DataFrame(data={ 'class': pair_class, 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file, index=False)
+
+
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
