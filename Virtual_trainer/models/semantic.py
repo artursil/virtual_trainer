@@ -81,6 +81,24 @@ def rotate_seq(seq, vects):
         seq[i] = qrot(q_, seq[i] )
     return seq
 
+class SimpleRegression(nn.Module):
+    """
+    Fully connected network for evaluation task.
+    """
+    def __init__(self, feat_list):
+        super().__init__()
+        regressor = []
+        for feat_in, feat_out in pairwise(feat_list):
+            regressor.append(nn.Linear(feat_in,feat_out))
+            regressor.append(nn.ReLU())
+        regressor.append(nn.Linear(feat_list[-1],1))
+        self.regressor = nn.ModuleList(regressor)
+    def forward(self,x):
+        x_rank = x.clone()
+        for rk_l in self.regressor:
+            x_rank = rk_l(x_rank)
+        return x_rank    
+
 class SplitModel(nn.Module):
     """
     split output
