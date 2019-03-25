@@ -17,6 +17,7 @@ import argparse
 from easygui import msgbox
 from torch.utils.data import DataLoader, RandomSampler
 from model_utils import  picture_keypoints, load_model_weights, build_model
+from models.semantic import SimpleRegression
 
 from video_extract import VideoScraper
 from openpose.model import get_model
@@ -273,11 +274,15 @@ class ModelClass(object):
 
         chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
         model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
-        
+
+        model_rank =  SimpleRegression([128,64,32])
+        chk_filename = os.path.join(CHECKPATH,"regressor-simple-regressor-3-300.pth")
+        model_rank.load_state_dict[chk_filename['model_state_dict']]
         with torch.no_grad():
             model.eval() 
             if torch.cuda.is_available():
                 model = model.cuda()
+                model_rank = model_rank.cuda()
                 # poses = poses.cuda()
             try:
                 poses = np.concatenate(poses)
@@ -299,7 +304,9 @@ class ModelClass(object):
             print(counts)
             ind = np.argmax(counts)
             self.prediction = EXC_DICT[values[ind]]
-            self.rating=9
+            
+            ratings=model_rank(embeds).detach().detach().cpu().numpy()
+            self.rating = np.mean(ratings)
             return self
         
     def vp3d_model(self):
