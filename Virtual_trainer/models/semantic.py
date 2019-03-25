@@ -127,6 +127,10 @@ class StandardiseKeypoints(nn.Module):
         self.kp_buff = x.detach().cpu().numpy()
         return x
 
+    def get_kp(self):
+        return self.kp_buff
+
+
 class HeadlessNet(nn.Module):
     """
     Headless network - legacy. Do not use
