@@ -7,6 +7,7 @@ from openpose.model import get_model
 from flask import Flask, render_template, Response
 from camera import VideoCamera
 from webcam_model import ModelClass
+import numpy as np
 
 app = Flask(__name__)
 
@@ -57,6 +58,20 @@ def openpose():
 def vp3d():
     array,n_frames = predict_cl.vp3d_model()
     return render_template('vp3d.html',prediction = predict_cl.prediction, array=array,n_frames=n_frames)
+
+@app.route('/vp3d2')
+def vp3d2():
+    array,n_frames = predict_cl.vp3d_model()
+    array = array.tolist()
+#     array = np.load('/media/artursil/backup/class_1.npy')
+#     array *= np.array([1,-1,1])
+#     print(array)
+#     print(array.shape)
+#     n_frames = array.shape[0]
+#     array = array.flatten().tolist()
+#     print(array)
+    return render_template('rend_skel.html',prediction = predict_cl.prediction, array_3d=array,n_frames=n_frames)
+#     return render_template('rend_skel.html',prediction = 0, array_3d=array,n_frames=n_frames)
 
 def gen(camera):
     while True:

@@ -28,7 +28,7 @@ from openpose.create_vp3d_input import delete_nans, rescale_keypoints
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
 from instagram.exercise_scraper import ExerciseScraper
-
+from VideoPose3D.common.model import  TemporalModel  
 
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -165,6 +165,61 @@ class ModelClass(object):
                 _, jpeg = cv2.imencode('.jpg', pic_key)
                 return  jpeg.tobytes()
         
+    # def vp3d_model(self):
+        
+    #     clip_df = interpolate(self.clip_df,interpolate_feet=False)
+        
+    #     clip_df =  delete_nans(clip_df)
+    #     multiplier = round(800/224,2)
+    #     clip_df =  rescale_keypoints(clip_df,multiplier)
+
+    #     actions, poses = fetch_keypoints(clip_df)
+    #     classes = 8
+
+    #     chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
+    #     model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
+        
+    #     pretrained = torch.load('../../virtual_trainer/Virtual_trainer/checkpoint/combinedlearning2-5.pth')
+    #     model.load_state_dict(pretrained['model_state_dict'])
+
+    #     with torch.no_grad():
+    #         model.eval() 
+    #         if torch.cuda.is_available():
+    #             model = model.cuda()
+    #             # poses = poses.cuda()
+    #         try:
+    #             poses = np.concatenate(poses)
+    #         except ValueError:
+    #             self.prediction = "No human detected"
+    #             return self
+    #         poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
+    #         poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
+    #         # print(f'Poses shape: {poses.shape}')
+    #         embeds, preds = model(poses)
+    #         kp_3d = model.transform.get_kp()
+    #         n_frames = kp_3d.shape[1]
+    #         kp_3d *= np.array([1,-1,1])
+    #         kp_3d = kp_3d.reshape(-1)
+    #         # print(f'Preds shape:{preds.shape}')
+    #         # print(preds)
+    #         softmax = torch.nn.Softmax(1)
+    #         pred= softmax(preds)
+    #         pred = pred.detach().cpu().numpy().squeeze()
+    #         print(pred)
+    #         preds = np.argmax(pred,axis=1)
+    #         print(preds)
+    #         values, counts = np.unique(preds,return_counts=True)
+    #         # print(values)
+    #         # print(counts)
+    #         ind = np.argmax(counts)
+    #         print(EXC_DICT[values[ind]])
+    #         # msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
+    #         self.prediction = EXC_DICT[values[ind]]
+    #         print(self.prediction)
+    #         return kp_3d, n_frames
+
+
+
     def vp3d_model(self):
         
         clip_df = interpolate(self.clip_df,interpolate_feet=False)
@@ -177,10 +232,10 @@ class ModelClass(object):
         classes = 8
 
         chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
-        model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
+        model = TemporalModel(17,2,17,[3,3,3,3,3],causal=True)
         
-        pretrained = torch.load('../../virtual_trainer/Virtual_trainer/checkpoint/combinedlearning2-5.pth')
-        model.load_state_dict(pretrained['model_state_dict'])
+        pretrained = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/Data/BaseModels/pretrained_h36m_cpn.bin')
+        model.load_state_dict(pretrained['model_pos'])
 
         with torch.no_grad():
             model.eval() 
@@ -192,27 +247,14 @@ class ModelClass(object):
             except ValueError:
                 self.prediction = "No human detected"
                 return self
-            poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
+            poses = np.pad(poses,((243,0),(0,0),(0,0)),'edge')
             poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
             # print(f'Poses shape: {poses.shape}')
-            embeds, preds = model(poses)
-            kp_3d = model.transform.get_kp()
+            kp_3d = model(poses)
+            # kp_3d = model.transform.get_kp()
+            kp_3d = kp_3d.detach().cpu().numpy()
             n_frames = kp_3d.shape[1]
+            kp_3d *= np.array([1,-1,1])
             kp_3d = kp_3d.reshape(-1)
-            # print(f'Preds shape:{preds.shape}')
-            # print(preds)
-            softmax = torch.nn.Softmax(1)
-            pred= softmax(preds)
-            pred = pred.detach().cpu().numpy().squeeze()
-            print(pred)
-            preds = np.argmax(pred,axis=1)
-            print(preds)
-            values, counts = np.unique(preds,return_counts=True)
-            # print(values)
-            # print(counts)
-            ind = np.argmax(counts)
-            print(EXC_DICT[values[ind]])
-            # msgbox(f'Predicted exercise: {EXC_DICT[values[ind]]}','Result')
-            self.prediction = EXC_DICT[values[ind]]
-            print(self.prediction)
+            self.prediction=0
             return kp_3d, n_frames

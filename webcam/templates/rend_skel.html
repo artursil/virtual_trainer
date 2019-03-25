@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>3D skeleton view</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 50%; height: 50% }
+		</style>
+	</head>
+	<body>
+        <script src="http://threejs.org/build/three.js"></script>
+        <script src="{{ url_for('static', filename='controls/OrbitControls.js') }}"></script>
+        <script src="{{ url_for('static', filename='WebGL.js') }}"></script>
+		<script>
+            if ( WEBGL.isWebGL2Available() === false ) { document.body.appendChild( WEBGL.getWebGL2ErrorMessage() );
+            }
+            
+            var kp_data = [];
+            var kp_data_flat = {{array_3d | tojson}};
+                            
+            var container;
+            var scene, camera, controls, renderer;
+            var skel, clock, min_wait;
+            var fps = 30;
+            var frame = 0;
+            var delt = 0;
+            init();
+            animate();
+
+            function unflatten_array(flat_ar){
+                var chunk_size = 17*3
+                var num_frames = flat_ar.length / chunk_size;
+                var ndArray = [];
+                for (i=0; i < num_frames; i++){
+                    var chunk_flat = flat_ar.slice(i*chunk_size,(i+1)*chunk_size);
+                    var chunk = [];
+                    while(chunk_flat.length) chunk.push(chunk_flat.splice(0,3));
+                    ndArray[i] = chunk;
+                }
+                return ndArray;
+            }
+
+            function load_kp(kp_arr){
+                kp_data = unflatten_array(kp_arr);
+            }
+
+            function map_vertices(){
+                var line_verts = [[], [], [], []];
+                var mappings = [[10,9,8,7,0,4,5,6], [8,11,12,13],
+                                [8,14,15,16],[0,1,2,3]];
+                var keypoints = kp_data[frame];
+                for (i=0; i < mappings.length; i++){
+                    line_verts[i] = mappings[i].map(x => keypoints[x]);
+                }
+                return line_verts;
+            };
+
+            function update_positions(){
+                var vertices = map_vertices();
+                for (i=0; i < skel.length; i++){
+                        skel[i].geometry.attributes.position.set(new Float32Array(vertices[i].flat()));
+                        skel[i].geometry.computeBoundingSphere();
+                    }
+            }
+
+            function init(){
+                clock = new THREE.Clock();
+                min_wait = 1 / (fps + 1);
+                load_kp(kp_data_flat);
+
+                container = document.createElement( 'div' );
+				document.body.appendChild( container );
+                var canvas = document.createElement( 'canvas' );
+                var context = canvas.getContext( 'webgl2' );
+                renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context } );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                container.appendChild( renderer.domElement );
+
+                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 5;
+                scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x202020 );
+                
+                controls = new THREE.OrbitControls( camera, renderer.domElement );
+			    controls.addEventListener( 'change', render );
+                controls.minZoom = 0.5;
+			    controls.maxZoom = 4;
+			    controls.update();
+                
+                var blue_mat = new THREE.LineBasicMaterial( {color: 0x0000ff, linewidth: 3});
+                var red_mat = new THREE.LineBasicMaterial( {color: 0xff0000, linewidth: 3});
+                skel = [];
+                var vertices = map_vertices();
+                
+                for (i=0; i < vertices.length; i++){
+                    var geometry = new THREE.BufferGeometry();
+                    var vert = new Float32Array(vertices[i].flat());
+                    geometry.addAttribute( 'position', new THREE.BufferAttribute( vert, 3 ) );
+                    geometry.computeBoundingSphere();
+                    var material = blue_mat;
+                    if (i < 2) { material = red_mat; }
+                    skel.push(new THREE.Line( geometry, material ));
+                    scene.add( skel[i] );
+                }
+                
+            }
+
+            function animate(){
+                requestAnimationFrame(animate);
+                delt += clock.getDelta();
+                if (frame == kp_data.length - 1){frame = 0;}
+                if (delt > min_wait){
+                    delt = 0;
+                    update_positions();
+                    for (i=0; i < skel.length; i++){
+                        skel[i].geometry.attributes.position.needsUpdate = true;
+                    }
+                    frame++;
+                    //console.log(frame);
+                    render();
+                } 
+                
+            }
+
+            function render() {
+
+                renderer.render( scene, camera );
+            }
+
+
+
+
+
+
+			
+		</script>
+	</body>
+</html>
