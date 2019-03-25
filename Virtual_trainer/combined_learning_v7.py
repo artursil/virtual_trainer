@@ -55,7 +55,7 @@ loss_margin = 0.3
 seed = 1234
 lr, lr_decay = 0.01 , 0.95 
 split_ratio = 0.2
-epochs = 5
+epochs = 10
 batch_size = 512
 n_chunks = 8
 weighting = 0.999 # classification loss weighting
@@ -234,12 +234,12 @@ model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, f
 
 epoch=1
 
-resume_cp = os.path.join(CHECKPATH,'combinedlearning-v5-533-rank_embed-128-9.pth')
-checkp = torch.load(resume_cp)
-epoch = checkp['epoch']+1
-model.load_state_dict(checkp['model_state_dict'])
+#resume_cp = os.path.join(CHECKPATH,'combinedlearning-v5-533-rank_embed-128-9.pth')
+#checkp = torch.load(resume_cp)
+#epoch = checkp['epoch']+1
+#model.load_state_dict(checkp['model_state_dict'])
 
-weighting = 0.5
+#weighting = 0.5
 
 receptive_field = model.embedding.embed_model.receptive_field()
 pad = (receptive_field - 1) 
