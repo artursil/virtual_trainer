@@ -5,7 +5,8 @@ import torch
 from torch import nn
 import re
 from openpose.mpii_config import *
-from models.semantic import TemporalModel, ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel
+import os
+from models.semantic import TemporalModel, ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel4,NaiveBaselineModel,HeadlessModule
 
 def picture_keypoints(personwiseKeypoints,keypoints_list,frameClone,after_shape):
     mult = frameClone.shape[0]/after_shape[0]
@@ -51,6 +52,47 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
           ('base', base) ,
           ('transform', StandardiseKeypoints(True,False)),
           ('embedding', HeadlessNet2(top)),
-          ('classifier', SplitModel(class_mod) )
+          ('classifier', SplitModel4(class_mod) )
         ]))
-    return model 
+    return model
+
+class HeadlessNet2(nn.Module):
+    """
+    Headless network
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        class_model.top_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+    def forward(self,x):
+        x = self.embed_model(x)
+        return x
+def build_model2(chk_filename,datapoint, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes):
+
+    chk_filename_base = os.path.join(datapoint,'BaseModels', 'epoch_45.bin')
+    pretrained_weights = torch.load(chk_filename_base, map_location=lambda storage, loc: storage)
+
+    top = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
+                                causal=True, dropout=0.25, channels=channels)
+    checkp = torch.load(chk_filename)
+    top.load_state_dict(checkp['model_state_dict'])
+    class_mod = nn.Conv1d( embedding_len, classes, 1)
+
+    class_mod = load_model_weights2(chk_filename,class_mod)
+    model = nn.Sequential(OrderedDict([
+          ('embedding', HeadlessNet2(top)),
+          ('classifier', SplitModel4(class_mod) )
+        ]))
+    return model
+
+def load_model_weights2(chk_filename,class_mod):
+    
+    pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)['model_state_dict']
+    top_weights = OrderedDict([(re.sub(r"(top_model.)","",key), value) for key, value in pretrained_weights.items() if key.startswith("top_model")])
+    class_weights = OrderedDict([(re.sub(r"(shrink.)","",key), value) for key, value in top_weights.items() if key.startswith("shrink")])
+
+    drop_keys = [f"shrink.{k}" for k in class_weights.keys()]
+    for k in drop_keys:
+        top_weights.pop(k)
+    class_mod.load_state_dict(class_weights)
+    return class_mod

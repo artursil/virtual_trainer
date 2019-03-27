@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 import argparse
 from easygui import msgbox
 from torch.utils.data import DataLoader, RandomSampler
-from model_utils import  picture_keypoints, load_model_weights, build_model, HeadlessNet2
+from model_utils import  picture_keypoints, load_model_weights, build_model
 from models.semantic import SimpleRegression, NaiveBaselineModel
 
 from video_extract import VideoScraper
@@ -31,8 +31,6 @@ from dataloader import *
 from simple_generators import SimpleSequenceGenerator
 from instagram.exercise_scraper import ExerciseScraper
 from VideoPose3D.common.model import  TemporalModel  
-import copy
-
 EXC_DICT = {
             0:'squat',
             1:'deadlift',
@@ -288,7 +286,7 @@ class ModelClass(object):
         
         chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
         pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
-        # model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
+
 
         model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
                                     causal=True, dropout=0.25, channels=channels)
@@ -301,18 +299,13 @@ class ModelClass(object):
         checkp['model_state_dict']
         model.load_state_dict(checkp['model_state_dict'])
 
-
-        model_embs = HeadlessNet2(copy.deepcopy(model))
         model_rank =  SimpleRegression([128,64,32])
         chk_filename = os.path.join(CHECKPATH,"regressor-simple-regressor-grouped-512-750.pth")
         model_rank.load_state_dict(torch.load(chk_filename)['model_state_dict'])
         with torch.no_grad():
-            model.eval()
-            model_rank.eval()
-            model_embs.eval()
+            model.eval() 
             if torch.cuda.is_available():
                 model = model.cuda()
-                model_embs = model_embs.cuda()
                 model_rank = model_rank.cuda()
                 # poses = poses.cuda()
             try:
@@ -325,9 +318,6 @@ class ModelClass(object):
             # print(f'Poses shape: {poses.shape}')
             # embeds, preds = model(poses)
             preds = model(poses)
-            print(preds.shape)
-            embeds = model_embs(poses)
-            embeds = embeds.permute(0,2,1)
             softmax = torch.nn.Softmax(1)
             pred= softmax(preds)
             pred = pred.detach().cpu().numpy().squeeze()
@@ -341,10 +331,38 @@ class ModelClass(object):
             print(values[ind])
             print(EXC_DICT[values[ind]])
             self.prediction = EXC_DICT[values[ind]]
-            print(embeds.shape)
-            ratings=model_rank(embeds).detach().detach().cpu().numpy()
-            self.rating = ratings.tolist()
-            self.clip_df_tmp = pd.DataFrame()
+
+        ######
+        chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
+        model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
+        with torch.no_grad():
+            model.eval() 
+            if torch.cuda.is_available():
+                model = model.cuda()
+                model_rank = model_rank.cuda()
+                # poses = poses.cuda()
+            embeds,preds = model(poses)
+            softmax = torch.nn.Softmax(1)
+            pred= softmax(preds)
+            pred = pred.detach().cpu().numpy().squeeze()
+            print(pred)
+            preds = np.argmax(pred,axis=1)
+            print(preds)
+            values, counts = np.unique(preds,return_counts=True)
+            print(values)
+            print(counts)
+            ind = np.argmax(counts)
+            print(values[ind])
+            print(EXC_DICT[values[ind]])
+            self.prediction = EXC_DICT[values[ind]]
+            
+
+
+
+        ######
+
+            # ratings=model_rank(embeds).detach().detach().cpu().numpy()
+            # self.rating = np.mean(ratings)
             return self
         
     def vp3d_model(self):

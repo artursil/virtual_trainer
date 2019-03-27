@@ -43,7 +43,7 @@ model = torch.nn.DataParallel(model)
 model = model.cuda()
 model.float()
 
-camera_index = 1
+camera_index = 2
 predict_cl = ModelClass(model,camera_index)
 
 @app.route('/')
@@ -56,8 +56,8 @@ def openpose():
 
 @app.route('/vp3d')
 def vp3d():
-    array,n_frames = predict_cl.vp3d_model()
-    return render_template('vp3d.html',prediction = predict_cl.prediction, array=array,n_frames=n_frames)
+    predict_cl.vp3d_recipe2()
+    return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
 
 @app.route('/vp3d2')
 def vp3d2():
@@ -81,7 +81,7 @@ def gen(camera):
 
 def gen_model(predict_cl):
     while True:
-        frame = predict_cl.get_keypoints()
+        frame = predict_cl.get_keypoints2()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
