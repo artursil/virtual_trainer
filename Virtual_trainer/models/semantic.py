@@ -7,7 +7,14 @@ Modifies Temporal CNN models from VideoPose3D + Quaternion utilities from Quater
 
 import torch
 import torch.nn as nn
-from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel  
+from VideoPose3D.common.model import TemporalModelOptimized1f, TemporalModel
+from itertools import tee
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 def qmul(q, r):
     """
@@ -74,6 +81,24 @@ def rotate_seq(seq, vects):
         seq[i] = qrot(q_, seq[i] )
     return seq
 
+class SimpleRegression(nn.Module):
+    """
+    Fully connected network for evaluation task.
+    """
+    def __init__(self, feat_list):
+        super().__init__()
+        regressor = []
+        for feat_in, feat_out in pairwise(feat_list):
+            regressor.append(nn.Linear(feat_in,feat_out))
+            regressor.append(nn.ReLU())
+        regressor.append(nn.Linear(feat_list[-1],1))
+        self.regressor = nn.ModuleList(regressor)
+    def forward(self,x):
+        x_rank = x.clone()
+        for rk_l in self.regressor:
+            x_rank = rk_l(x_rank)
+        return x_rank    
+
 class SplitModel(nn.Module):
     """
     split output
@@ -90,14 +115,51 @@ class SplitModel2(nn.Module):
     """
     split output
     """
+    def __init__(self, class_model, feats_in, feats_out):
+        super().__init__()
+        self.class_model = class_model
+        self.embed_layer = nn.Conv1d(feats_in,feats_out,1)
+    def forward(self,x):
+        pred = self.class_model(x).permute(0,2,1)
+        embed = self.embed_layer(x).permute(0,2,1) # conv produces 1*128 , want flat 128
+        return embed, pred
+
+class SplitModel4(nn.Module):
+    """
+    split output
+    """
     def __init__(self, class_model):
         super().__init__()
         self.class_model = class_model
-        self.embed_layer = nn.Conv1d(128,64,1)
     def forward(self,x):
-        pred = self.class_model(x).permute(0,2,1)
+        pred = self.class_model(x)
         embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
         return embed, pred
+
+class SplitModel3(nn.Module):
+    """
+    split output
+    """
+    def __init__(self, feat_list, num_classes):
+        super().__init__()
+        classifier = []
+        regressor = []
+        for feat_in, feat_out in pairwise(feat_list):
+            classifier.append(nn.Linear(feat_in,feat_out))
+            regressor.append(nn.Linear(feat_in,feat_out))
+            classifier.append(nn.ReLU())
+            regressor.append(nn.ReLU())
+        classifier.append(nn.Linear(feat_list[-1],num_classes))
+        regressor.append(nn.Linear(feat_list[-1],1))
+        self.classifier = nn.ModuleList(classifier)
+        self.regressor = nn.ModuleList(regressor)
+    def forward(self,x):
+        x_class = x.permute(0,2,1).squeeze()
+        x_rank = x_class.clone()
+        for cl_l, rk_l in zip(self.classifier, self.regressor):
+            x_class = cl_l(x_class)
+            x_rank = rk_l(x_rank)
+        return x_rank, x_class
 
 class StandardiseKeypoints(nn.Module):
     """
@@ -126,7 +188,6 @@ class StandardiseKeypoints(nn.Module):
 
     def get_kp(self):
         return self.kp_buff
-
 
 class HeadlessNet(nn.Module):
     """
@@ -207,13 +268,16 @@ class NaiveStridedModel(nn.Module):
     Strided version for training
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels, loadBase=True):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels, filter_widths2=None, loadBase=True):
         super().__init__()
+        if filter_widths2 is None:
+            filter_widths2 = filter_widths
+
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
         if loadBase:
             self.base_model.load_state_dict(pretrained_weights['model_pos'])
-        self.top_model = ModdedStridedModel(num_joints_out, 3, num_joints_out, filter_widths,
+        self.top_model = ModdedStridedModel(num_joints_out, 3, num_joints_out, filter_widths2,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
 
@@ -230,13 +294,15 @@ class NaiveBaselineModel(nn.Module):
     Reference version for running
     """
     def __init__(self, num_joints_in, in_features, num_joints_out, filter_widths,
-                     pretrained_weights, embedding_len, classes, causal, dropout, channels, loadBase=True):
+                     pretrained_weights, embedding_len, classes, causal, dropout, channels,filter_widths2=None, loadBase=True):
         super().__init__()
+        if filter_widths2 is None:
+            filter_widths2 = filter_widths
         self.base_model = TemporalModel(num_joints_in, in_features, num_joints_out, filter_widths,
                             causal=causal, dropout=dropout, channels=channels)
         if loadBase:
             self.base_model.load_state_dict(pretrained_weights['model_pos'])
-        self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths,
+        self.top_model = ModdedTemporalModel(num_joints_out, 3, num_joints_out, filter_widths2,
                                         causal=causal, dropout=dropout, channels=embedding_len, skip_res=False)
         self.top_model.shrink = nn.Conv1d( embedding_len, classes, 1)
 
@@ -297,14 +363,14 @@ class ModdedStridedModel(TemporalModelOptimized1f):
         # flatten input
         x = x.view(x.shape[0], x.shape[1], -1)
         x = x.permute(0, 2, 1)
-        
+
         x = self.drop(self.relu(self.expand_bn(self.expand_conv(x)))) 
         
         # iterate through blocks
         for i in range(len(self.pad) - 1):
             # don't take a residual if last block
             res = 0 if (i == (len(self.pad) - 2) and self.skip_res) else x[:, :, self.causal_shift[i+1] + self.filter_widths[i+1]//2 :: self.filter_widths[i+1]]
-            
+
             x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
             x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
         x = self.shrink(x) # Classifier unit
@@ -333,7 +399,6 @@ class ModdedTemporalModel(TemporalModel):
         assert len(x.shape) == 4
         assert x.shape[-2] == self.num_joints_in
         assert x.shape[-1] == self.in_features
-        
         x = x.view(x.shape[0], x.shape[1], -1)
         x = x.permute(0, 2, 1)
         
