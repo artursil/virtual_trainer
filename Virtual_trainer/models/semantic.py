@@ -177,6 +177,9 @@ class StandardiseKeypoints(nn.Module):
         x = rotate_seq(x,direction_hip) # orientate hips
         x = rotate_seq(x,direction_spine) # orientate spine
         return x
+
+    def get_3dkeys(self):
+        return self.kp_buff
         
     def forward(self, x):
         if self.centering:

@@ -7,7 +7,6 @@ from openpose.model import get_model
 from flask import Flask, render_template, Response
 from camera import VideoCamera
 from webcam_model import ModelClass
-import numpy as np
 
 app = Flask(__name__)
 
@@ -43,7 +42,11 @@ model = torch.nn.DataParallel(model)
 model = model.cuda()
 model.float()
 
+<<<<<<< HEAD
 camera_index = 2
+=======
+camera_index = 0
+>>>>>>> 7c3f33bd744767a8a7eb4eb5a01d7b1b1cae8f8f
 predict_cl = ModelClass(model,camera_index)
 
 @app.route('/')
@@ -54,8 +57,18 @@ def index():
 def openpose():
     return render_template('openpose.html')
 
+@app.route("/stream")
+def stream():
+    def eventStream():
+        while True:
+            if predict_cl.new_pred:
+                yield "data: {}\n\n".format(predict_cl.get_prediction())
+    
+    return Response(eventStream(), mimetype="text/event-stream")
+
 @app.route('/vp3d')
 def vp3d():
+<<<<<<< HEAD
     predict_cl.vp3d_recipe2()
     return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
 
@@ -72,6 +85,10 @@ def vp3d2():
 #     print(array)
     return render_template('rend_skel.html',prediction = predict_cl.prediction, array_3d=array,n_frames=n_frames)
 #     return render_template('rend_skel.html',prediction = 0, array_3d=array,n_frames=n_frames)
+=======
+    predict_cl.vp3d_model()
+    return render_template('vp3d.html',prediction = predict_cl.prediction)
+>>>>>>> 7c3f33bd744767a8a7eb4eb5a01d7b1b1cae8f8f
 
 def gen(camera):
     while True:
