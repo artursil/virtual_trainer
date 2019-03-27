@@ -40,7 +40,7 @@ CHECKPATH = 'checkpoint'
 # Data mountpoint
 DATAPOINT = "Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = 'simple-regressor-grouped'
+EXPERIMENT_NAME = 'simple-regressor-grouped-512'
 METRICSPATH = os.path.join('metrics',EXPERIMENT_NAME)
 
 try:
@@ -121,8 +121,8 @@ def train_model(model,epoch_start, epochs,lr,lr_decay):
         st = time.time()
         epoch_loss_train = train_epoch(model)
         print(f"Epoch {epoch}: Training complete, beginning evaluation")
-        epoch_loss_test= evaluate_epoch(model,epoch)
-        log_results(epoch, st, epoch_loss_train, epoch_loss_test)
+        epoch_loss_test, val_targets= evaluate_epoch(model,epoch)
+        log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets)
         # loss_tuple.append(pairings)
         lr *= lr_decay  
 
@@ -154,6 +154,7 @@ def evaluate_epoch(model,epoch):
         rankings_list = []
         pred_list = []
         cl_list = []
+        targets = []
         for X, rankings_np,classes_np in generator.next_batch_valid():
             X = torch.from_numpy(X.astype('float32'))
             rankings = torch.from_numpy(rankings_np.astype('float32'))
@@ -172,9 +173,11 @@ def evaluate_epoch(model,epoch):
         preds = np.concatenate(pred_list)
         classes = np.concatenate(cl_list)
         bok_file = f"{METRICSPATH}/ranking_{epoch}.html"
+        targets.append( (classes.squeeze(),rankings.squeeze(),preds.squeeze(),
+            preds.squeeze()))
         if epoch%10==0:
             box_plot(rankings.squeeze(),preds.squeeze(),classes.squeeze(),bok_file,epoch)
-    return epoch_loss_test
+    return epoch_loss_test, targets
 
 def log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets=None, pairings=None):  
     losses_train.append(epoch_loss_train)
