@@ -53,4 +53,5 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
           ('embedding', HeadlessNet2(top)),
           ('classifier', SplitModel(class_mod) )
         ]))
+    print("model built")
     return model 

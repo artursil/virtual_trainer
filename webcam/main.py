@@ -6,7 +6,8 @@ import torch
 from openpose.model import get_model
 from flask import Flask, render_template, Response
 from camera import VideoCamera
-from webcam_model import ModelClass
+from webcam_model import PredModel
+from multiprocessing import Queue, Event
 
 app = Flask(__name__)
 
@@ -35,15 +36,14 @@ chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
 filter_widths = [3,3,3]
 channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
-weight_name = '../../virtual_trainer/openpose/weights/openpose_mpii_best.pth.tar'
-model = get_model('vgg19')     
-model.load_state_dict(torch.load(weight_name)['state_dict'])
-model = torch.nn.DataParallel(model)
-model = model.cuda()
-model.float()
+
+
+img_q = Queue()
+start_gen = Event()
 
 camera_index = 0
-predict_cl = ModelClass(model,camera_index)
+print("create model")
+predict_cl = PredModel(camera_index, img_q, start_gen)
 
 @app.route('/')
 def index():
@@ -57,40 +57,30 @@ def openpose():
 def stream():
     def eventStream():
         while True:
-            if predict_cl.new_pred:
+            if predict_cl.e.is_set():
                 yield "data: {}\n\n".format(predict_cl.get_prediction())
     
     return Response(eventStream(), mimetype="text/event-stream")
 
-@app.route('/vp3d')
-def vp3d():
-    predict_cl.vp3d_model()
-    return render_template('vp3d.html',prediction = predict_cl.prediction)
 
-def gen(camera):
-    while True:
-        frame = camera.get_frame()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
-def gen_model(predict_cl):
+
+def gen():
     while True:
-        frame = predict_cl.get_keypoints2()
+        print("pop")
+        frame =  img_q.get()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 @app.route('/video_feed')
 def video_feed():
-         
-    return Response(gen(predict_cl),
-#     return Response(gen(VideoCamera(camera_index)),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    start_gen.set()
+    return Response( gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/openpose_feed')
 def openpose_feed():
-#     predict_cl = OpenPose(model,camera_index)  
-    return Response(gen_model(predict_cl),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    start_gen.set()
+    return Response( gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':
