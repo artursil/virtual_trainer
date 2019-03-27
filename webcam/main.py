@@ -7,88 +7,28 @@ from openpose.model import get_model
 from flask import Flask, render_template, Response
 from camera import VideoCamera
 from webcam_model import ModelClass
+from model_utils import load_all_models
+from multiprocessing import Queue, Event
 
 app = Flask(__name__)
-
-CHECKPATH = 'Virtual_trainer/checkpoint'
-
-# Data mountpoint
-DATAPOINT = "Virtual_trainer/Data"
-
-# --- Datasets ---
-# H36M Ground truths
-h36m_file = os.path.join(DATAPOINT,'Keypoints','data_2d_h36m_gt.npz')
-
-
-
-# --- Parameters ---
-batch_size = 2048
-epochs = 20
-embedding_len = 128
-lr, lr_decay = 0.001 , 0.95 
-split_ratio = 0.2
-
-# --- H36M pretrained model settings ---
-# checkpoint file
-chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
-# model architecture
-filter_widths = [3,3,3]
-channels = 1024
-in_joints, in_dims, out_joints = 17, 2, 17
-weight_name = '../../virtual_trainer/openpose/weights/openpose_mpii_best.pth.tar'
-model = get_model('vgg19')     
-model.load_state_dict(torch.load(weight_name)['state_dict'])
-model = torch.nn.DataParallel(model)
-model = model.cuda()
-model.float()
-
-<<<<<<< HEAD
-camera_index = 2
-=======
+img_q = Queue()
+openpose_model = load_all_models()
+kill_get_kp = False
 camera_index = 0
->>>>>>> 7c3f33bd744767a8a7eb4eb5a01d7b1b1cae8f8f
-predict_cl = ModelClass(model,camera_index)
+predict_cl = ModelClass(openpose_model,camera_index, img_q)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
 
 @app.route('/openpose')
 def openpose():
     return render_template('openpose.html')
 
-@app.route("/stream")
-def stream():
-    def eventStream():
-        while True:
-            if predict_cl.new_pred:
-                yield "data: {}\n\n".format(predict_cl.get_prediction())
-    
-    return Response(eventStream(), mimetype="text/event-stream")
-
 @app.route('/vp3d')
 def vp3d():
-<<<<<<< HEAD
     predict_cl.vp3d_recipe2()
     return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
-
-@app.route('/vp3d2')
-def vp3d2():
-    array,n_frames = predict_cl.vp3d_model()
-    array = array.tolist()
-#     array = np.load('/media/artursil/backup/class_1.npy')
-#     array *= np.array([1,-1,1])
-#     print(array)
-#     print(array.shape)
-#     n_frames = array.shape[0]
-#     array = array.flatten().tolist()
-#     print(array)
-    return render_template('rend_skel.html',prediction = predict_cl.prediction, array_3d=array,n_frames=n_frames)
-#     return render_template('rend_skel.html',prediction = 0, array_3d=array,n_frames=n_frames)
-=======
-    predict_cl.vp3d_model()
-    return render_template('vp3d.html',prediction = predict_cl.prediction)
->>>>>>> 7c3f33bd744767a8a7eb4eb5a01d7b1b1cae8f8f
 
 def gen(camera):
     while True:
@@ -98,7 +38,7 @@ def gen(camera):
 
 def gen_model(predict_cl):
     while True:
-        frame = predict_cl.get_keypoints2()
+        frame = predict_cl.get_keypoints()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
@@ -108,7 +48,24 @@ def video_feed():
     return Response(gen(predict_cl),
 #     return Response(gen(VideoCamera(camera_index)),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-
+@app.route("/stream")
+def stream():
+    def eventStream():
+        while True:
+            prediction = img_q.get()
+            # if predict_cl.new_pred:
+            yield "data: {}\n\n".format(prediction)
+    
+    return Response(eventStream(), mimetype="text/event-stream")
+@app.route('/vp3d_feed')
+def vp3d_feed():
+    print('start')
+    predict_cl.vp3d_recipe2()     
+    print('stop')
+    return Response(gen(predict_cl),
+#     return Response(gen(VideoCamera(camera_index)),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+                    
 @app.route('/openpose_feed')
 def openpose_feed():
 #     predict_cl = OpenPose(model,camera_index)  
