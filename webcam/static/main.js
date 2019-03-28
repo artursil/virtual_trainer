@@ -24,7 +24,8 @@ window.onload = function(){
       } else {
         start_stop='stop'
         var image = document.getElementsByClassName("videostream");
-        image.video.src = '/vp3d_feed' 
+        // image.video.src = '/vp3d_feed' 
+        location.href = '/vp3d'
       }
   };
 };

@@ -47,39 +47,42 @@ EXC_DICT = {
 }
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-EPOCHS=1
+# EPOCHS=1
 
 
-CHECKPATH = '../../virtual_trainer/Virtual_trainer/checkpoint'
+# CHECKPATH = '../../virtual_trainer/Virtual_trainer/checkpoint'
 
-# Data mountpoint
-DATAPOINT = "../../virtual_trainer/Virtual_trainer/Data"
+# # Data mountpoint
+# DATAPOINT = "../../virtual_trainer/Virtual_trainer/Data"
 
-# --- Datasets ---
-# H36M Ground truths
-h36m_file = os.path.join(DATAPOINT,'Keypoints','data_2d_h36m_gt.npz')
+# # --- Datasets ---
+# # H36M Ground truths
+# h36m_file = os.path.join(DATAPOINT,'Keypoints','data_2d_h36m_gt.npz')
 
 
 
-# --- Parameters ---
-batch_size = 2048
-epochs = 20
-embedding_len = 128
-lr, lr_decay = 0.001 , 0.95 
-split_ratio = 0.2
+# # --- Parameters ---
+# batch_size = 2048
+# epochs = 20
+# embedding_len = 128
+# lr, lr_decay = 0.001 , 0.95 
+# split_ratio = 0.2
 
-# --- H36M pretrained model settings ---
-# checkpoint file
-chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
-# model architecture
-filter_widths = [3,3,3]
-channels = 1024
-in_joints, in_dims, out_joints = 17, 2, 17
+# # --- H36M pretrained model settings ---
+# # checkpoint file
+# chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
+# # model architecture
+# filter_widths = [3,3,3]
+# channels = 1024
+# in_joints, in_dims, out_joints = 17, 2, 17
 
 
 class ModelClass(object):
-    def __init__(self,model,index, img_q):
+    def __init__(self,model,class_model,model_embs,model_rank,index, img_q):
         self.model=model
+        self.class_model = class_model
+        self.model_embs = model_embs
+        self.model_rank = model_rank
 
         self.video = cv2.VideoCapture(index)
 
@@ -188,26 +191,29 @@ class ModelClass(object):
         clip_df =  rescale_keypoints(clip_df,multiplier)
 
         actions, poses = fetch_keypoints(clip_df)
-        classes = 8
+        # classes = 8
 
         
-        chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
-        pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
+        # chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
+        # pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
 
-        model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
-                                    causal=True, dropout=0.25, channels=channels)
-        receptive_field = model.base_model.receptive_field()
-        pad = (receptive_field - 1) 
-        causal_shift = pad
-        chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
-        checkp = torch.load(chk_filename)
-        model.load_state_dict(checkp['model_state_dict'])
+        # model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
+        #                             causal=True, dropout=0.25, channels=channels)
+        # receptive_field = model.base_model.receptive_field()
+        # pad = (receptive_field - 1) 
+        # causal_shift = pad
+        # chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
+        # checkp = torch.load(chk_filename)
+        # model.load_state_dict(checkp['model_state_dict'])
 
 
-        model_embs = HeadlessNet2(copy.deepcopy(model))
-        model_rank =  SimpleRegression([128,64,32])
-        chk_filename = os.path.join(CHECKPATH,"regressor-simple-regressor-grouped-512-750.pth")
-        model_rank.load_state_dict(torch.load(chk_filename)['model_state_dict'])
+        # model_embs = HeadlessNet2(copy.deepcopy(model))
+        # model_rank =  SimpleRegression([128,64,32])
+        # chk_filename = os.path.join(CHECKPATH,"regressor-simple-regressor-grouped-recipe2-512-600.pth")
+        # model_rank.load_state_dict(torch.load(chk_filename)['model_state_dict'])
+        model = self.class_model
+        model_embs = self.model_embs
+        model_rank = self.model_rank
         with torch.no_grad():
             model.eval()
             model_rank.eval()

@@ -12,10 +12,10 @@ from multiprocessing import Queue, Event
 
 app = Flask(__name__)
 img_q = Queue()
-openpose_model = load_all_models()
+openpose_model, class_model, model_embs, model_rank = load_all_models()
 kill_get_kp = False
 camera_index = 0
-predict_cl = ModelClass(openpose_model,camera_index, img_q)
+predict_cl = ModelClass(openpose_model, class_model, model_embs, model_rank,camera_index, img_q)
 
 @app.route('/')
 def index():
@@ -48,13 +48,13 @@ def video_feed():
     return Response(gen(predict_cl),
 #     return Response(gen(VideoCamera(camera_index)),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-@app.route("/stream")
-def stream():
-    def eventStream():
-        while True:
-            prediction = img_q.get()
-            # if predict_cl.new_pred:
-            yield "data: {}\n\n".format(prediction)
+# @app.route("/stream")
+# def stream():
+#     def eventStream():
+#         while True:
+#             prediction = img_q.get()
+#             # if predict_cl.new_pred:
+#             yield "data: {}\n\n".format(prediction)
     
     return Response(eventStream(), mimetype="text/event-stream")
 @app.route('/vp3d_feed')
