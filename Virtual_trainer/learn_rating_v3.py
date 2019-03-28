@@ -19,7 +19,7 @@ import numpy as np
 from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
 import neptune
 from neptune_connector.np_config import NEPTUNE_TOKEN
-from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel3, SimpleRegression
+from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessModule, SplitModel3, SimpleRegression,NaiveBaselineModel
 from models.loss import  CombinedLoss3
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator, SimpleSiameseGenerator
@@ -40,7 +40,7 @@ CHECKPATH = 'checkpoint'
 # Data mountpoint
 DATAPOINT = "Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = 'simple-regressor-grouped-512'
+EXPERIMENT_NAME = 'simple-regressor-grouped-recipe2-256'
 METRICSPATH = os.path.join('metrics',EXPERIMENT_NAME)
 
 try:
@@ -55,8 +55,8 @@ loss_margin = 0.3
 seed = 1234
 lr, lr_decay = 0.001 , 0.95 
 split_ratio = 0.2
-epochs = 1000
-batch_size = 512
+epochs = 800
+batch_size = 256
 n_chunks = 8
 weighting = 0.999 # classification loss weighting
 weighting_decay = 0.95 
@@ -175,7 +175,7 @@ def evaluate_epoch(model,epoch):
         bok_file = f"{METRICSPATH}/ranking_{epoch}.html"
         targets.append( (classes.squeeze(),rankings.squeeze(),preds.squeeze(),
             preds.squeeze()))
-        if epoch%10==0:
+        if epoch%50==0:
             box_plot(rankings.squeeze(),preds.squeeze(),classes.squeeze(),bok_file,epoch)
     return epoch_loss_test, targets
 
@@ -251,12 +251,39 @@ rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 # non exercise class id to supress from ranking loss
 
-model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
+class HeadlessNet2(nn.Module):
+    """
+    Headless network
+    """
+    def __init__(self, class_model):
+        super().__init__()
+        class_model.top_model.shrink = HeadlessModule()
+        self.embed_model = class_model
+    def forward(self,x):
+        x = self.embed_model(x)
+        return x
+        
+chk_filename = os.path.join(DATAPOINT,'BaseModels', 'epoch_45.bin')
+pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
+# model = build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, True, channels, embedding_len,classes)
 
+model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
+                            causal=True, dropout=0.25, channels=channels)
+receptive_field = model.base_model.receptive_field()
+pad = (receptive_field - 1) 
+causal_shift = pad
+chk_filename = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth")
+checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/Recipe-2-epoch-19.pth')
+# checkp = torch.load('/home/artursil/Documents/virtual_trainer/Virtual_trainer/checkpoint/model-6.pth')
+checkp['model_state_dict']
+model.load_state_dict(checkp['model_state_dict'])
+
+
+model2 = HeadlessNet2(model)
 epoch=1
 
 
-receptive_field = model.base.receptive_field()
+receptive_field = model2.embed_model.base_model.receptive_field()
 pad = (receptive_field - 1) 
 causal_shift = pad
 
@@ -277,7 +304,7 @@ actions, out_poses_2d,from_clip_flgs, return_idx, ratings, filenames_final, targ
 # ratings += ratings_ucf
 # filenames_final += filenames_ucf
 
-generator = SimpleSiameseGenerator(batch_size, targets, out_poses_2d,ratings,model,filenames_final, pad=pad,
+generator = SimpleSiameseGenerator(batch_size, targets, out_poses_2d,ratings,model2,filenames_final, pad=pad,
                  causal_shift=causal_shift, test_split=split_ratio, random_seed=seed,just_emb=True) # todo
 
 model = SimpleRegression([128,64,32])
