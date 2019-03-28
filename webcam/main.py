@@ -9,6 +9,7 @@ from camera import VideoCamera
 from webcam_model import ModelClass
 from model_utils import load_all_models
 from multiprocessing import Queue, Event
+import json
 
 app = Flask(__name__)
 img_q = Queue()
@@ -28,7 +29,15 @@ def openpose():
 @app.route('/vp3d')
 def vp3d():
     predict_cl.vp3d_recipe2()
-    return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
+#     return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
+#     return jsonify(predict_cl.prediction)
+#     response = app.response_class(
+#         response=json.dumps(predict_cl.prediction),
+#         status=200,
+#         mimetype='application/json'
+#     )
+#     return response
+    return Response(json.dumps({'prediction':predict_cl.prediction,'rating':predict_cl.rating}),mimetype='application/json')
 
 def gen(camera):
     while True:
@@ -52,9 +61,10 @@ def video_feed():
 # def stream():
 #     def eventStream():
 #         while True:
-#             prediction = img_q.get()
-#             # if predict_cl.new_pred:
-#             yield "data: {}\n\n".format(prediction)
+#         #     prediction = img_q.get()
+#             if predict_cl.new_pred:
+#                 # yield "data: {}\n\n".format(prediction)
+#                 yield "data: {}\n\n".format(predict_cl.prediction)
     
     return Response(eventStream(), mimetype="text/event-stream")
 @app.route('/vp3d_feed')

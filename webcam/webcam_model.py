@@ -226,9 +226,9 @@ class ModelClass(object):
                 poses = np.concatenate(poses)
             except ValueError:
                 self.prediction = "No human detected"
-                self.img_q.put(json.dumps({'prediction':self.prediction}))
-                print(self.img_q.get())
-                self.new_pred=True
+                # self.rating = [{'x':1,'y':9},
+                #                 {'x':2,'y':8}]
+                self.rating = None
                 return self
             poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
             poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
@@ -245,6 +245,8 @@ class ModelClass(object):
             self.img_q.put(self.prediction)
             ratings=model_rank(embeds).detach().detach().cpu().numpy()
             self.rating = ratings.tolist()
+            self.rating = [{'x':x,'y':y[0]} for x,y in enumerate(self.rating[0])]
+            print(self.rating)
             self.clip_df_tmp = pd.DataFrame()
             self.clip_df = pd.DataFrame()
             self.new_pred=True

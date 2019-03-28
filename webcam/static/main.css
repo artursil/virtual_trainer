@@ -113,3 +113,6 @@ body {
   max-width:500px;
   margin:auto;
 }        
+#prediction, #rating {
+    color: white;
+}
