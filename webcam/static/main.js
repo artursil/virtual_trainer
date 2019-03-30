@@ -13,11 +13,12 @@ evtSource.onmessage = function(e) {
 
 window.onload = function(){ 
   var classify = document.getElementById('prediction');
-  var rating = document.getElementById('rating');
+  //var rating = document.getElementById('rating');
   var welcome = document.getElementById('welcome');
+  var predwrap = document.getElementById('predwrap');
   var start_stop='stop';
   welcome.style.display="block";
-  classify.style.display = "none";
+  predwrap.style.display = "none";
   document.getElementById("button1").onclick = function () {
       document.getElementById('button1').innerHTML = start_stop.toUpperCase(); 
 
@@ -29,7 +30,7 @@ window.onload = function(){
         welcome.style.display="block";
         image.video.src = '/openpose_feed';
         classify.style.display = "none";
-        rating.style.display = "none";
+        predwrap.style.display = "none";
       } else {
         start_stop='stop';
         var image = document.getElementsByClassName("videostream");
@@ -44,7 +45,7 @@ window.onload = function(){
               if (response.rating==null){
                 classify.style.display = "block";
               }
-              rating.style.display = "block";
+              predwrap.style.display = "block";
               welcome.style.display="none";
               classify.innerHTML = response.prediction;
               // rating.innerHTML = response.rating;

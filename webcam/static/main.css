@@ -117,7 +117,7 @@ body {
 }
 #strip #vidbox{
   padding: 20px;
-  flex: 1 1 auto;
+  flex: 2 1 auto;
   transition: all 2s;
   /*width: 50%;*/
 }
@@ -144,7 +144,7 @@ body {
 }
 
 #predwrap {
-  flex: 2 1 auto;
+  flex: 3 1 auto;
   padding: 10px;
   transition: all 2s;
 }

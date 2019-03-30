@@ -15,7 +15,7 @@ app = Flask(__name__)
 img_q = Queue()
 openpose_model, class_model, model_embs, model_rank = load_all_models()
 kill_get_kp = False
-camera_index = 1
+camera_index = 0 #1
 predict_cl = ModelClass(openpose_model, class_model, model_embs, model_rank,camera_index, img_q)
 
 @app.route('/')

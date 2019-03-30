@@ -1,16 +1,16 @@
 import os
 import cv2
-import pafy
+#import pafy
 import youtube_dl
 import re
 import json
 import pandas as pd
 import numpy as np
 from moviepy.editor import *
-from slugify import slugify
+#from slugify import slugify
 
 from itertools import chain
-from langdetect import detect
+#from langdetect import detect
 
 
 EXC_INTER_FEET = ['deadlift','squat','bodyweightsquats']

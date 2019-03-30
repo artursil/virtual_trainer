@@ -15,7 +15,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 import argparse
 import json
-from easygui import msgbox
+#from easygui import msgbox
 from torch.utils.data import DataLoader, RandomSampler
 from model_utils import  picture_keypoints, HeadlessNet2
 from models.semantic import SimpleRegression, NaiveBaselineModel
