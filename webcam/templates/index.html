@@ -6,24 +6,29 @@
     <title>Virtual trainer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="//brick.a.ssl.fastly.net/Roboto:400"/>
-    <link rel="stylesheet" type="text/css" media="screen" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" type="text/css" media="screen" href="static/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script src="static/main.js"></script>
     <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 </head>
 <body>
     
-<h1>Virtual trainer</h1>   
-
-<img id="video" class="videostream"  src="{{ url_for('video_feed') }}">
-<!-- <p>Welcome to Virtual Trainer</p>
-<p>Please position your camera and press start when you're ready!</p> -->
-<div class="button-wrapper">
-<button id='button1' class="snip1562">Start !</button>
-<div id='prediction'></div>
-<!-- <div id='rating'></div>    -->
-
+        
+<div id="strip">
+        <header id="banner"><div id="logowrapper"><h1>Virtual trainer</h1></div> </header>
+    <div id="vidbox">
+            <img id="video" class="videostream"  src="{{ url_for('video_feed') }}">
+            <div class="button-wrapper"><button id='button1' class="snip1562">Start !</button></div>
+    </div>
+    <div id="welcome" style="display: none"><p>Welcome to Virtual Trainer</p>
+        <p>Please position your camera and press start when you're ready!</p></div>
+    
+    <div id="predwrap">
+        <div id='prediction'>Prediction</div>
+        <div id="rating" style="height: 370px; width: 100%;"></div>
+    </div>
+    
 </div>
-<div id="rating" style="height: 370px; width: 100%;"></div>
+
 </body>
 </html>

@@ -1,41 +1,43 @@
 
 @import url(https://fonts.googleapis.com/css?family=BenchNine:700);
+@import url(https://fonts.googleapis.com/css?family=Droid+Sans);
+@import url(https://use.typekit.net/oom1faf.css);
 
-h1 {
-  font-family: "Avant Garde", Avantgarde, "Century Gothic", CenturyGothic, "AppleGothic", sans-serif;
-  font-size: 55px;
-  padding: 40px 30px;
-  text-align: center;
+#banner{
+  border: none;
+  flex: 1 0 100%;
+  background-color: #ffffff;
+  width: 100%;
+  padding: 0px;
+  height:100px;
+  
+}
+header {
+  font-family: bebas-neue, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  padding:0px;
+  text-align: left;
   text-transform: uppercase;
   text-rendering: optimizeLegibility;
-    color: #e0dfdc;
-    background-color: #333;
-    letter-spacing: .1em;
-    text-shadow: 
-      0 -1px 0 #fff, 
-      0 1px 0 #2e2e2e, 
-      0 2px 0 #2c2c2c, 
-      0 3px 0 #2a2a2a, 
-      0 4px 0 #282828, 
-      0 5px 0 #262626, 
-      0 6px 0 #242424, 
-      0 7px 0 #222, 
-      0 8px 0 #202020, 
-      0 9px 0 #1e1e1e, 
-      0 10px 0 #1c1c1c, 
-      0 11px 0 #1a1a1a, 
-      0 12px 0 #181818, 
-      0 13px 0 #161616, 
-      0 14px 0 #141414, 
-      0 15px 0 #121212, 
-      0 22px 30px rgba(0, 0, 0, 0.9);
+    color: #604e47;
+  
+
+}
+
+#logowrapper {
+  border-bottom: 6px solid #ff7f00;
+  width:200px;
+  height: 60px;
+  padding: 40px 0px 0px 10px;
 }
 
 
+
 .snip1562 {
-  background-color: #4b4471;
+  background-color: #A51502;
   border: none;
-  color: #ffffff;
+  color: #eedddd;
   cursor: pointer;
   display: inline-block;
   font-family: 'BenchNine', Arial, sans-serif;
@@ -54,7 +56,7 @@ h1 {
 
 .snip1562:before,
 .snip1562:after {
-  border-color: #4b4471;
+  border-color: #604e47;
   -webkit-transition: all 0.25s;
   transition: all 0.25s;
   border-style: solid;
@@ -66,7 +68,7 @@ h1 {
 }
 
 .snip1562:before {
-  border-color: #4b4471;
+  border-color: #604e47;
   border-left-width: 4px;
   border-top-width: 4px;
   left: -5px;
@@ -75,7 +77,7 @@ h1 {
 
 .snip1562:after {
   border-bottom-width: 4px;
-  border-color: #4b4471;
+  border-color: #604e47;
   border-right-width: 4px;
   bottom: -5px;
   right: -5px;
@@ -83,14 +85,14 @@ h1 {
 
 .snip1562:hover,
 .snip1562.hover {
-  background-color: #c53f31;
+  background-color: #ff7f00;
 }
 
 .snip1562:hover:before,
 .snip1562.hover:before,
 .snip1562:hover:after,
 .snip1562.hover:after {
-  border-color: #d83625;
+  border-color: #ff7f00;
   height: 100%;
   width: 100%;
 }
@@ -98,21 +100,59 @@ h1 {
 
 /* Demo purposes only */
 body {
-
-/* background-image: url("gym.jpg"); */
-
-  background-color: #212121;
+  background-image: url("background.jpg"); 
+  background-size: 100%;
 }
+
+#strip{
+  display: flex;
+  justify-items: center;
+  flex-flow: row wrap;
+  border: none;
+  padding: 0px;
+  width: 100%;
+  background-color: #DDC0B2aa;
+  border-bottom: 25px solid #604e47;
+  font-family: 'Droid Sans', droid-sans, sans-serif;
+}
+#strip #vidbox{
+  padding: 20px;
+  flex: 1 1 auto;
+  transition: all 2s;
+  /*width: 50%;*/
+}
+#welcome{
+  
+  flex: 1 1 auto;
+  font-size: 1.5em;
+}
+
 .videostream{
+  
   display: block;
-  margin-left: auto;
-  margin-right: auto;
-  width: 40%;
+  margin: auto;
+  
+  width: 50%;
+  max-width: 750px;
+  min-width: 300px;
 }
 .button-wrapper{
   max-width:500px;
+  padding-left: 5%;
   margin:auto;
-}        
+  align-items: center;
+}
+
+#predwrap {
+  flex: 2 1 auto;
+  padding: 10px;
+  transition: all 2s;
+}
+
 #prediction, #rating {
-    color: white;
+    color: #A51502;
+    margin: auto;
+    width:50%;
+    max-width: 700px;
+    font-size: 2em;
 }

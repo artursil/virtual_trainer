@@ -239,14 +239,26 @@ class ModelClass(object):
             pred= softmax(preds)
             pred = pred.detach().cpu().numpy().squeeze()
             preds = np.argmax(pred,axis=0)
+            print(preds)
             values, counts = np.unique(preds,return_counts=True)
+            clip_length = len(preds)
             ind = np.argmax(counts)
-            self.prediction = EXC_DICT[values[ind]]
+            print(counts[values==7]/clip_length)
+            other_count  = counts[values==7]/clip_length
+            if other_count <0.4 and values[ind]==6:
+                values = values[values!=6]
+                counts = counts[values!=6]
+                ind = np.argmax(counts)
+            if counts[values==7]/clip_length>0.15:
+                print('0.15 or more')
+                self.prediction = 'Cleanandjerk'
+            else:
+                self.prediction = EXC_DICT[values[ind]]
             self.img_q.put(self.prediction)
             ratings=model_rank(embeds).detach().detach().cpu().numpy()
             self.rating = ratings.tolist()
             self.rating = [{'x':x,'y':y[0]} for x,y in enumerate(self.rating[0])]
-            print(self.rating)
+            # print(self.rating)
             self.clip_df_tmp = pd.DataFrame()
             self.clip_df = pd.DataFrame()
             self.new_pred=True

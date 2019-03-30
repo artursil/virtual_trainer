@@ -14,20 +14,24 @@ evtSource.onmessage = function(e) {
 window.onload = function(){ 
   var classify = document.getElementById('prediction');
   var rating = document.getElementById('rating');
+  var welcome = document.getElementById('welcome');
   var start_stop='stop';
+  welcome.style.display="block";
+  classify.style.display = "none";
   document.getElementById("button1").onclick = function () {
       document.getElementById('button1').innerHTML = start_stop.toUpperCase(); 
 
       if (start_stop=='stop'){
-        start_stop='start'
-        console.log(start_stop)
+        start_stop='start';
+        console.log(start_stop);
         var image = document.getElementsByClassName("videostream");
-        console.log(image)
-        image.video.src = '/openpose_feed'
+        console.log(image);
+        welcome.style.display="block";
+        image.video.src = '/openpose_feed';
         classify.style.display = "none";
         rating.style.display = "none";
       } else {
-        start_stop='stop'
+        start_stop='stop';
         var image = document.getElementsByClassName("videostream");
 
         $.ajax({
@@ -36,8 +40,12 @@ window.onload = function(){
           data: {jsdata: ''},
           success: function(response) {
             // $("#place_for_suggestions").html(response);
-              classify.style.display = "block";
+              console.log(response.rating);
+              if (response.rating==null){
+                classify.style.display = "block";
+              }
               rating.style.display = "block";
+              welcome.style.display="none";
               classify.innerHTML = response.prediction;
               // rating.innerHTML = response.rating;
               rating_data = response.rating;
@@ -46,9 +54,10 @@ window.onload = function(){
         if (rating_data!=null){
               var chart = new CanvasJS.Chart("rating", {
                 animationEnabled: true,
-                backgroundColor: "#333",
+                backgroundColor: 'transparent',
+                
                 title:{
-                  text: "Ratings"
+                  text: response.prediction.charAt(0).toUpperCase() + response.prediction.slice(1)
                 },
                 axisX:{
                   valueFormatString: " ",
@@ -74,6 +83,7 @@ window.onload = function(){
                 },
                 data: [{
                   type: "area",
+                  color: "#ff7f00",
                   // xValueFormatString: "DD MMM",
                   // yValueFormatString: "$##0.00",
                   dataPoints:	rating_data}]
@@ -87,46 +97,6 @@ window.onload = function(){
           }
         });  
         image.video.src = '/video_feed' 
-        // location.href = '/vp3d'
-        // var data_test = [
-        //       { x: 1, y: 9 },
-        //       { x: 2, y: 8 }
-        //     ]
-
-        // console.log(rating_data);
-        // var chart = new CanvasJS.Chart("rating", {
-        //   animationEnabled: true,
-        //   backgroundColor: "#808080",
-        //   title:{
-        //     text: "Ratings"
-        //   },
-        //   axisX:{
-        //     // valueFormatString: "DD MMM",
-        //     crosshair: {
-        //       enabled: true,
-        //       snapToDataPoint: true
-        //     }
-        //   },
-        //   axisY: {
-        //     title: "Closing Price (in USD)",
-        //     gridThickness: 0,
-        //     includeZero: false,
-        //     // valueFormatString: "$##0.00",
-        //     crosshair: {
-        //       enabled: true,
-        //       snapToDataPoint: true,
-        //       labelFormatter: function(e) {
-        //         return "$" + CanvasJS.formatNumber(e.value, "##0.00");
-        //       }
-        //     }
-        //   },
-        //   data: [{
-        //     type: "area",
-        //     // xValueFormatString: "DD MMM",
-        //     // yValueFormatString: "$##0.00",
-        //     dataPoints:	rating_data}]
-        // });
-        // chart.render();
       }
   };
 };
