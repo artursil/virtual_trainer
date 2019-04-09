@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from bokeh.io.export import get_screenshot_as_png
 from bokeh.palettes import magma
 from bokeh.transform import jitter
 from bokeh.layouts import widgetbox
@@ -10,10 +11,28 @@ from bokeh.models.widgets import Panel, Tabs, Slider
 from bokeh.plotting import figure, save, output_file
 from sklearn.metrics import confusion_matrix
 from scipy.special import softmax
+from PIL import Image
+import neptune
 
 
 class_names = ['squat', 'deadlift', 'pushups', 'pullups', 'wallpushups', 'lunges', 'other', 'cleanandjerk']
 num_of_classes = len(class_names)
+
+
+
+def fig2pil(fig):
+    fig.canvas.draw()
+
+    w, h = fig.canvas.get_width_height()
+    buf = np.fromstring(fig.canvas.tostring_argb(), dtype=np.uint8)
+    buf.shape = (w, h, 4)
+    buf = np.roll(buf, 3, axis=2)
+
+    w, h, d = buf.shape
+    return Image.frombytes("RGBA", (w, h), buf.tostring())
+
+
+
 
 def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
 
@@ -81,6 +100,137 @@ def prepare_plots(pairings,target_vals,epoch, METRICSPATH):
     output_file(bok_file, title="Ranking by exercise")
     save(p)
     pair_df = pd.DataFrame(data={ 'idx1': idx1, 'idx2': idx2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file)
+
+def prepare_plots2(pairings,target_vals,epoch, METRICSPATH):
+
+    cfm_file = f"{METRICSPATH}/confusion-{epoch}.png"
+    bok_file = f"{METRICSPATH}/ranking_{epoch}.html"
+    pairing_file = f"{METRICSPATH}/pairings_{epoch}.csv"
+
+    classes, rankings, preds, embeds = [],[],[],[]
+    rank1, rank2, dists, pair_class = [], [], [], []
+
+    for t_ , p_ in zip(target_vals, pairings):
+        cl_,ra_,pr_,em_ = t_
+        rk1_, rk2_, dist_, pcl_ = zip(*p_)
+        classes.append(cl_)
+        rankings.append(ra_)
+        preds.append(pr_)
+        embeds.append(em_)
+
+        rank1.append(rk1_)
+        rank2.append(rk2_)
+        dists.append(dist_)
+        pair_class.append(pcl_)
+
+
+    classes = np.squeeze(np.concatenate(classes))
+    rankings = np.squeeze(np.concatenate(rankings))
+    predictions = np.concatenate([softmax(p,axis=0) for p in preds])
+    embeds = np.concatenate(embeds)
+    dists = np.concatenate(dists)
+    rank1 = np.concatenate(rank1)
+    rank2 = np.concatenate(rank2)
+    pair_class = np.concatenate(pair_class)
+    
+    activations = np.argmax(predictions,axis=1) 
+    conf_mat = confusion_matrix(classes,activations)
+    fig = plt.figure(figsize=[10,8])
+    plot_confusion_matrix(conf_mat, classes=class_names, normalize=False,
+                      title=f'Confusion matrix epoch {epoch}')
+    plt.savefig(cfm_file,format="png")
+    pil_image = fig2pil(fig)
+    neptune.send_image('conf_mat', pil_image)
+
+
+    max_rank = np.max(rankings)
+    true_dist = rank1 - rank2
+    tar_d = max_rank - true_dist
+    pred_d = max_rank - dists
+    pair_class = pair_class.astype(int)
+    df = pd.DataFrame(data={ 'tar': tar_d, 'pred': pred_d, 'class': pair_class})
+
+    
+    palette = magma(num_of_classes + 1)
+    p = figure(plot_width=600, plot_height=800, title=f"Ranking by exercise, epoch {epoch}")
+    p.xgrid.grid_line_color = None
+    p.xaxis.axis_label = 'Target ranking'
+    p.yaxis.axis_label = 'Predicted ranking'
+    
+
+    
+    for cl in range(num_of_classes):
+        if cl == 6:
+            continue
+        df2 = df.loc[df['class']==cl]
+        p.circle(x=jitter('tar', 0.5), y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
+        p.line(x='tar', y='pred', line_width=2, alpha=0.5, color=palette[cl], legend=class_names[cl], source=df2.groupby(by="tar").mean())
+    p.legend.location = "top_left"
+    p.legend.click_policy="hide"
+    output_file(bok_file, title="Ranking by exercise")
+    save(p)
+    pil_image2 = get_screenshot_as_png(p)
+    neptune.send_image('rank_distances', pil_image2)
+
+    pair_df = pd.DataFrame(data={ 'class': pair_class, 'rank1': rank1, 'rank2': rank2, 'dist':dists, 'true_dist':true_dist}).to_csv(pairing_file, index=False)
+
+
+def prepare_plots3(target_vals,epoch, METRICSPATH):
+
+    cfm_file = f"{METRICSPATH}/confusion-{epoch}.png"
+    bok_file = f"{METRICSPATH}/ranking_{epoch}.html"
+   
+
+    classes, rankings, preds, pred_rank = [],[],[],[]
+    
+    for t_ in target_vals:
+        cl_,ra_,pr_,em_ = t_
+        classes.append(cl_)
+        rankings.append(ra_)
+        preds.append(pr_)
+        pred_rank.append(em_)
+
+
+
+    classes = np.squeeze(np.concatenate(classes))
+    rankings = np.squeeze(np.concatenate(rankings))
+    predictions = np.concatenate([softmax(p,axis=0) for p in preds])
+    pred_rank = np.concatenate(pred_rank)
+    
+    activations = np.argmax(predictions,axis=1) 
+    conf_mat = confusion_matrix(classes,activations)
+    fig = plt.figure(figsize=[10,8])
+    plot_confusion_matrix(conf_mat, classes=class_names, normalize=False,
+                      title=f'Confusion matrix epoch {epoch}')
+    plt.savefig(cfm_file,format="png")
+    pil_image = fig2pil(fig)
+    neptune.send_image('conf_mat', pil_image)
+
+
+    df = pd.DataFrame(data={ 'tar': rankings, 'pred': pred_rank, 'class': classes})
+
+    
+    palette = magma(num_of_classes + 1)
+    p = figure(plot_width=600, plot_height=800, title=f"Ranking by exercise, epoch {epoch}")
+    p.xgrid.grid_line_color = None
+    p.xaxis.axis_label = 'Target ranking'
+    p.yaxis.axis_label = 'Predicted ranking'
+    
+
+    
+    for cl in range(num_of_classes):
+        if cl == 6:
+            continue
+        df2 = df.loc[df['class']==cl]
+        p.circle(x=jitter('tar',0.3), y='pred', size=8, alpha=0.1, color=palette[cl], legend=class_names[cl], source=df2 )
+        p.line(x='tar', y='pred', line_width=2, alpha=0.5, color=palette[cl],legend=class_names[cl], source=df2.groupby(by="tar").mean())
+    p.legend.location = "top_left"
+    p.legend.click_policy="hide"
+    output_file(bok_file, title="Ranking by exercise")
+    save(p)
+    pil_image2 = get_screenshot_as_png(p)
+    neptune.send_image('rank_distances', pil_image2)
+
 
 
 def plot_confusion_matrix(cm, classes,

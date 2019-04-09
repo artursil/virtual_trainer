@@ -19,7 +19,7 @@ import numpy as np
 from VideoPose3D.common.model import TemporalModel, TemporalModelOptimized1f
 import neptune
 from neptune_connector.np_config import NEPTUNE_TOKEN
-from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel
+from models.semantic import ModdedTemporalModel, ModdedStridedModel, StandardiseKeypoints, HeadlessNet2, SplitModel, SplitModel2
 from models.loss import CombinedLoss
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator, SimpleSiameseGenerator
@@ -37,9 +37,9 @@ except OSError as e:
 CHECKPATH = 'checkpoint'
 
 # Data mountpoint
-DATAPOINT = "Data"
+DATAPOINT = "../../../Data"
 PROJECT_NAME = 'VT-combined'
-EXPERIMENT_NAME = 'v4-RMSE-fixed_64'
+EXPERIMENT_NAME = 'v6a-pretrain-ranking'
 METRICSPATH = os.path.join('metrics',EXPERIMENT_NAME)
 
 
@@ -53,7 +53,7 @@ except OSError as e:
 
 loss_margin = 0.3
 seed = 1234
-lr, lr_decay = 0.001 , 0.95 
+lr, lr_decay = 0.01 , 0.95 
 split_ratio = 0.2
 epochs = 5
 batch_size = 512
@@ -75,7 +75,8 @@ neptune.create_experiment(EXPERIMENT_NAME,
                                   'lr_decay':lr_decay,
                                   'loss_margin': loss_margin,
                                   'class_weight': f'{class_weight}',
-                                  'emb_layer': '[128,64]',
+                                  'emb_layer': '[128,128]',
+                                  'optimiser': 'sgd'
                                   
                                   })
 
@@ -85,8 +86,10 @@ def train_model(model,epoch_start, epochs,lr,lr_decay,weighting,weighting_decay)
     for epoch in range(epoch_start,epochs+1):
         if torch.cuda.is_available():
             model.cuda()
+        print(f"Starting epoch {epoch}")
         st = time.time()
         epoch_loss_train = train_epoch(model)
+        print(f"Epoch {epoch}: Training complete, beginning evaluation")
         epoch_loss_test, val_targets, pairings = evaluate_epoch(model)
         log_results(epoch, st, epoch_loss_train, epoch_loss_test,val_targets, pairings)
         loss_tuple.append(pairings)
@@ -95,8 +98,8 @@ def train_model(model,epoch_start, epochs,lr,lr_decay,weighting,weighting_decay)
         weighting *= weighting_decay
         loss_fun.set_weighting(weighting)
 
-        for param_group in optimizer.param_groups:
-            param_group['lr'] *= lr_decay
+        #for param_group in optimizer.param_groups:
+        #    param_group['lr'] *= lr_decay
         generator.next_epoch()  
 
 def train_epoch(model):
@@ -117,10 +120,14 @@ def train_epoch(model):
         embeds, preds = model(X)
         batch_loss = loss_fun(embeds, preds, classes, rankings)
         neptune.send_metric('batch_loss', batch_loss)
+        cl_loss, rk_loss, cur_weight = loss_fun.get_metrics()
+        neptune.send_metric('classification_training_loss', cl_loss)
+        neptune.send_metric('Ranking_training_loss', rk_loss)
+        neptune.send_metric('current_weighting', cur_weight)
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
         optimizer.step()
-        break
+        
     return epoch_loss_train
 
 def evaluate_epoch(model):
@@ -138,6 +145,9 @@ def evaluate_epoch(model):
                 rankings = rankings.cuda()
             embeds, preds = model(X)
             batch_loss = loss_fun(embeds, preds, classes, rankings)
+            cl_loss, rk_loss, _ = loss_fun.get_metrics()
+            neptune.send_metric('classification_validation_loss', cl_loss)
+            neptune.send_metric('Ranking_validation_loss', rk_loss)
             pairings.append(np.concatenate([p.reshape(-1,4) for p in loss_fun.get_pairings()]))
             epoch_loss_test.append(batch_loss.detach().cpu().numpy())
             targets.append( (classes_np,rankings_np,preds.detach().cpu().numpy().squeeze(),
@@ -188,10 +198,10 @@ def load_model_weights(chk_filename,base,top, class_mod):
     class_mod.load_state_dict(class_weights)
     return base, top, class_mod
 
-def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes):
+def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, filter_widths2, causal, channels, embedding_len,classes):
 
     base= TemporalModel(in_joints,in_dims,out_joints,filter_widths,causal=True,dropout=0.25,channels=channels)
-    top= ModdedStridedModel(in_joints, 3, out_joints, filter_widths, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
+    top= ModdedStridedModel(in_joints, 3, out_joints, filter_widths2, causal=True, dropout=0.25, channels=embedding_len, skip_res=False)
     class_mod = nn.Conv1d( embedding_len, classes, 1)
 
     base, top, class_mod = load_model_weights(chk_filename,base,top,class_mod)
@@ -199,12 +209,13 @@ def build_model(chk_filename, in_joints, in_dims, out_joints, filter_widths, cau
           ('base', base) ,
           ('transform', StandardiseKeypoints(True,False)),
           ('embedding', HeadlessNet2(top)),
-          ('classifier', SplitModel(class_mod) )
+          ('classifier', SplitModel2(class_mod,embedding_len,128) )
         ]))
     return model 
 
 # model architecture
 filter_widths = [3,3,3]
+filter_widths2 = [5,3,3]
 channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 causal = True
@@ -212,25 +223,25 @@ embedding_len = 128
 classes=8
 
 # --- params ---
-pretrained = os.path.join(CHECKPATH,"Recipe-2-epoch-19.pth") # pretrained base
+pretrained = os.path.join(CHECKPATH,"Recipe-2-embedvariant-128-epoch-4.pth") # pretrained base
 kpfile_1 = os.path.join(DATAPOINT,"Keypoints","keypoints.csv") # squats and dealifts
 kpfile_2 = os.path.join(DATAPOINT,"Keypoints", "keypoints_rest.csv") # rest of classes
 rating_file = os.path.join(DATAPOINT,"clips-rated.csv") # rating labels file
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 # non exercise class id to supress from ranking loss
 
-model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, causal, channels, embedding_len,classes)
+model = build_model(pretrained, in_joints, in_dims, out_joints, filter_widths, filter_widths2, causal, channels, embedding_len,classes)
 
 epoch=1
 
-#resume_cp = os.path.join(CHECKPATH,'combinedlearning-1st-4.pth')
-#checkp = torch.load(resume_cp)
-#epoch = checkp['epoch']+1
-#model.load_state_dict(checkp['model_state_dict'])
+resume_cp = os.path.join(CHECKPATH,'combinedlearning-v5-533-rank_embed-128-9.pth')
+checkp = torch.load(resume_cp)
+epoch = checkp['epoch']+1
+model.load_state_dict(checkp['model_state_dict'])
 
-#weighting *= weighting_decay**(epoch-1)
+weighting = 0.5
 
-receptive_field = model.base.receptive_field()
+receptive_field = model.embedding.embed_model.receptive_field()
 pad = (receptive_field - 1) 
 causal_shift = pad
 
@@ -256,8 +267,8 @@ generator = SimpleSiameseGenerator(batch_size, targets, out_poses_2d,ratings, pa
 if torch.cuda.is_available():
     class_weight = class_weight.cuda()
 loss_fun = CombinedLoss(nn.CrossEntropyLoss(weight=class_weight),weighting,supress_cl=supress_cl,rooting=rmse,margin=loss_margin)
-train_parameters = list(model.embedding.parameters()) + list(model.classifier.parameters())
-optimizer = optim.Adam(train_parameters,lr, amsgrad=True)
+#train_parameters = list(model.embedding.parameters()) + list(model.classifier.parameters())
+optimizer = optim.SGD(model.classifier.embed_layer.parameters(), lr, weight_decay=lr_decay)
 losses_train = []
 losses_test = []
 
