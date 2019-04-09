@@ -14,9 +14,10 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
-from models.semantic import BaselineWithkeypoints
+from models.semantic import NaiveBaselineModel
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
+from itertools import compress
 
 try:
     # Create checkpoint directory if it does not exist
@@ -60,20 +61,28 @@ action_op2, poses_op2, vid_idx2 = fetch_openpose_keypoints(ucf_file)
 action_op_test, poses_op_test, vid_idx_test = fetch_openpose_keypoints(ucf_file_test)
 actions_op_itest, poses_op_itest, vid_idx_itest = fetch_openpose_keypoints(insta_test_file)
 
-actions = action_op + action_op2
-actions = [action if action!=8 else 6 for action in actions]
-poses = poses_op + poses_op2
-vid_idx = vid_idx + vid_idx2
 
-# balance the dataset
-seed = 1234
-balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
-actions_test = [actions[x] for x in test_ids]
-poses_test = [poses[x] for x in test_ids]
-#actions_test = actions_test + action_op_test + actions_op_itest
-#poses_test = poses_test + poses_op_test + poses_op_itest
-actions_test = actions_op_itest
-poses_test = poses_op_itestactions_op_itest, poses_op_itest, vid_idx_itest = fetch_openpose_keypoints(insta_test_file)
+def balance_dataset_recipe2(targets,seed):
+    np.random.seed(seed)
+    classes, counts = np.unique(targets,return_counts=True)
+    sm_class = classes[counts.argmin()]
+    smpl_size = counts.min()
+    smpl_size = 100
+    idx_all = np.array(range(len(targets)))
+    idx = np.where(targets == sm_class)[0]
+    for cl in range(len(classes)):
+        if classes[cl] == sm_class: 
+            continue
+        elif counts[cl]<=300:
+            ix_ = np.random.choice(np.where(targets == classes[cl])[0],counts[cl],False)
+        else:
+            ix_ = np.random.choice(np.where(targets == classes[cl])[0],smpl_size,False)
+        idx = np.concatenate((idx,ix_))
+    idx_test = np.array([x for x in idx_all if x not in list(idx)])
+    return idx, idx_test
+
+
+
 # --- Parameters ---
 batch_size = 1024
 epochs = 20
@@ -89,27 +98,32 @@ filter_widths = [3,3,3]
 channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 
-# actions = action_op + action_op2
-# actions = [action if action!=8 else 6 for action in actions]
-# poses = poses_op + poses_op2
+action_op_4 = list(compress(action_op2,np.array(action_op2)==4))[31:45]
+poses_op_4 = list(compress(poses_op2,np.array(action_op2)==4))[31:45]
+action_op_4 += list(compress(action_op2,np.array(action_op2)==7))[:10]
+poses_op_4 += list(compress(poses_op2,np.array(action_op2)==7))[:10]
+
+actions = action_op + action_op_test + actions_op_itest + action_op_4
+actions = [action if action!=8 else 6 for action in actions]
+poses = poses_op + poses_op_test + poses_op_itest + poses_op_4
 # vid_idx = vid_idx + vid_idx2
 
-# # balance the dataset
+# 4th class
+
+
 # seed = 1234
-# balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
-# actions_test = [actions[x] for x in test_ids][:200]
-# poses_test = [poses[x] for x in test_ids][:200]
-# actions_test = actions_test + action_op_test + actions_op_itest
-# poses_test = poses_test + poses_op_test + poses_op_itest
-# # actions_test = actions_op_itest
-# # poses_test = poses_op_itest
-print(actions)
+test_ids,balanced = balance_dataset_recipe2(np.array(actions),seed)
+actions_test = [actions[x] for x in test_ids]
+actions_test = [action if action<=7 else 6 for action in actions_test]
+poses_test = [poses[x] for x in test_ids]
+
+print(actions_test)
 
 
 # build models
-classes = len(np.unique(actions))
+classes = 8
 pretrained_weights = torch.load(chk_filename, map_location=lambda storage, loc: storage)
-eval_model = BaselineWithkeypoints(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
+eval_model = NaiveBaselineModel(in_joints, in_dims, out_joints, filter_widths, pretrained_weights, embedding_len, classes,
                                 causal=True, dropout=0.25, channels=channels)
 
 
@@ -149,7 +163,7 @@ with torch.no_grad():
 #        poses = np.concatenate(poses)
         poses = np.pad(poses,((54,0),(0,0),(0,0)),'edge')
         poses = torch.Tensor(np.expand_dims(poses,axis=0)).cuda()
-        pred, seq_keypoints = eval_model(poses)
+        pred = eval_model(poses)
         actions = actions_test[ix]
         orig_action = actions
         if actions>7:
@@ -172,14 +186,13 @@ with torch.no_grad():
         values, counts = np.unique(preds,return_counts=True)
         ind = np.argmax(counts)
         accuracy_test.append((orig_action,np.sum(values[ind]==actions)))
-        vp3d_keypoints.append(seq_keypoints)
+#        vp3d_keypoints.append(seq_keypoints)
     print(np.mean([x[1] for x in accuracy_test]))
             
 torch.save({
         'losses_test': test_losses,
         'test_targets' : targets,
         'targets_softmax': targets_softmax,
-        'accuracy' : accuracy_test,
-        '3d_keypoints' : vp3d_keypoints
+        'accuracy' : accuracy_test
         }, os.path.join(CHECKPATH,f'Recipe-2-test-results2.pth') )
    

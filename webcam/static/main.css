@@ -114,10 +114,11 @@ body {
   background-color: #DDC0B2aa;
   border-bottom: 25px solid #604e47;
   font-family: 'Droid Sans', droid-sans, sans-serif;
+  min-height: 800px;
 }
 #strip #vidbox{
   padding: 20px;
-  flex: 2 1 auto;
+  flex: 2 2 auto;
   transition: all 2s;
   /*width: 50%;*/
 }
@@ -132,7 +133,7 @@ body {
   display: block;
   margin: auto;
   
-  width: 50%;
+  width: 75%;
   max-width: 750px;
   min-width: 300px;
 }
@@ -144,9 +145,13 @@ body {
 }
 
 #predwrap {
-  flex: 3 1 auto;
+  flex: 4 1 auto;
   padding: 10px;
   transition: all 2s;
+}
+
+#rating{
+  min-width: 600px;
 }
 
 #prediction, #rating {

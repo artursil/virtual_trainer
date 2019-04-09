@@ -249,7 +249,7 @@ class ModelClass(object):
                 values = values[values!=6]
                 counts = counts[values!=6]
                 ind = np.argmax(counts)
-            if counts[values==7]/clip_length>0.15:
+            if counts[values==7]/clip_length>0.4:
                 print('0.15 or more')
                 self.prediction = 'Cleanandjerk'
             else:

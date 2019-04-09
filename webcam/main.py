@@ -15,7 +15,7 @@ app = Flask(__name__)
 img_q = Queue()
 openpose_model, class_model, model_embs, model_rank = load_all_models()
 kill_get_kp = False
-camera_index = 0 #1
+camera_index = 1
 predict_cl = ModelClass(openpose_model, class_model, model_embs, model_rank,camera_index, img_q)
 
 @app.route('/')
@@ -29,14 +29,7 @@ def openpose():
 @app.route('/vp3d')
 def vp3d():
     predict_cl.vp3d_recipe2()
-#     return render_template('vp3d.html',prediction = predict_cl.prediction, rating=predict_cl.rating)
-#     return jsonify(predict_cl.prediction)
-#     response = app.response_class(
-#         response=json.dumps(predict_cl.prediction),
-#         status=200,
-#         mimetype='application/json'
-#     )
-#     return response
+
     return Response(json.dumps({'prediction':predict_cl.prediction,'rating':predict_cl.rating}),mimetype='application/json')
 
 def gen(camera):
@@ -57,14 +50,6 @@ def video_feed():
     return Response(gen(predict_cl),
 #     return Response(gen(VideoCamera(camera_index)),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-# @app.route("/stream")
-# def stream():
-#     def eventStream():
-#         while True:
-#         #     prediction = img_q.get()
-#             if predict_cl.new_pred:
-#                 # yield "data: {}\n\n".format(prediction)
-#                 yield "data: {}\n\n".format(predict_cl.prediction)
     
     return Response(eventStream(), mimetype="text/event-stream")
 @app.route('/vp3d_feed')
