@@ -122,7 +122,6 @@ class SplitModel2(nn.Module):
     def forward(self,x):
         pred = self.class_model(x).permute(0,2,1)
         embed = self.embed_layer(x).permute(0,2,1) # conv produces 1*128 , want flat 128
-<<<<<<< HEAD
         return embed, pred
 
 class SplitModel4(nn.Module):
@@ -135,8 +134,6 @@ class SplitModel4(nn.Module):
     def forward(self,x):
         pred = self.class_model(x)
         embed = x.permute(0,2,1) # conv produces 1*128 , want flat 128
-=======
->>>>>>> cleanup
         return embed, pred
 
 class SplitModel3(nn.Module):

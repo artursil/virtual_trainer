@@ -965,6 +965,64 @@
             "BtEIbjCBiro"
         ]
     },
+    "cleanandjerk": {
+        "max_kg": 150,
+        "max_reps": 15,
+        "avg_rep": 6,
+        "exercises": {
+            "benchpress": [
+                "benchpress",
+                "bench"
+            ],
+            "cleanandjerk": [
+                "cleanandjerk"
+            ],
+            "pullup": [
+                "pullup",
+                "pullups"
+            ],
+            "pushup": [
+                "pushup",
+                "pushups"
+            ],
+            "squat": [
+                "squat",
+                "squats"
+            ],
+            "deadlift": [
+                "deadlift",
+                "dl"
+            ],
+            "overheadsquat": [
+                "overheadsquat",
+                "overhead squat",
+                "ohs"
+            ],
+            "shoulderpress": [
+                "shoulder",
+                "shoulderpress"
+            ]
+        },
+        "stop_words": [
+            "sumo",
+            "sumodeadlift",
+            "?",
+            "advice",
+            "crossfit",
+            "form",
+            "press",
+            "bulgarian",
+            "bulgarianbag",
+            "diary",
+            "arms",
+            "fitspo",
+            "dumbass",
+            "kettle",
+            "medicine"
+        ],
+        "ids_to_exclude": [],
+        "shortcodes_to_exclude": []
+    },
     "squat": {
         "max_kg": 150,
         "max_reps": 15,

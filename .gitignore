@@ -114,6 +114,12 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
+bin/
+etc/
+lib/
+lib64/
+share/
+pyvenv.cfg
 .env
 .venv
 env/
@@ -134,3 +140,5 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+pyvenv.cfg
+lib64

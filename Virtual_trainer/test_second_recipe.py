@@ -31,11 +31,7 @@ subjects = ['S1','S5','S6','S7','S8']
 instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 ucf_file_test = os.path.join(DATAPOINT,'Keypoints','keypoints_rest_test.csv')
-<<<<<<< HEAD
 insta_test_file = os.path.join(DATAPOINT,'Keypoints','keypoints_insta_test2.csv')
-=======
-insta_test_file = os.path.join(DATAPOINT,'Keypoints','keypoints_insta_test.csv')
->>>>>>> cleanup
 # --- Parameters ---
 batch_size = 1024
 epochs = 20
@@ -70,7 +66,6 @@ seed = 1234
 balanced, test_ids = balance_dataset_recipe2(np.array(actions),seed)
 actions_test = [actions[x] for x in test_ids]
 poses_test = [poses[x] for x in test_ids]
-<<<<<<< HEAD
 #actions_test = actions_test + action_op_test + actions_op_itest
 #poses_test = poses_test + poses_op_test + poses_op_itest
 actions_test = actions_op_itest
@@ -105,14 +100,12 @@ in_joints, in_dims, out_joints = 17, 2, 17
 # # actions_test = actions_op_itest
 # # poses_test = poses_op_itest
 print(actions)
-=======
 
 #balance squats and deadlifts
 actions_test = np.array(actions_test)
 poses_test = np.array(poses_test)
 actions_ds = list(actions_test[actions_test==1][:100]) + list(actions_test[actions_test==0][:100])
 poses_ds = list(poses_test[actions_test==1][:100]) + list(poses_test[actions_test==0][:100])
->>>>>>> cleanup
 
 
 #
@@ -162,12 +155,9 @@ with torch.no_grad():
     targets = []
     test_losses = []
     accuracy_test = []
-<<<<<<< HEAD
     targets_softmax = []
-=======
     validation_targets = []
     pred_dict = {}
->>>>>>> cleanup
     for ix,poses in enumerate(poses_test):
         if ix%1000==0:
             print(ix)   
@@ -197,11 +187,7 @@ with torch.no_grad():
         pred = pred.detach().cpu().numpy().squeeze()
         pred_copy = pred
         preds = np.argmax(pred,axis=0)
-<<<<<<< HEAD
-        targets_softmax.append((act,preds))
-=======
         
->>>>>>> cleanup
         values, counts = np.unique(preds,return_counts=True)
         ind = np.argmax(counts)
 #        if sum(preds==7)/len(preds)>0.35 and values[ind] in [0,1]:
@@ -233,11 +219,6 @@ torch.save({
         'test_targets' : targets,
         'targets_softmax': targets_softmax,
         'accuracy' : accuracy_test,
-<<<<<<< HEAD
-        '3d_keypoints' : vp3d_keypoints
-        }, os.path.join(CHECKPATH,f'Recipe-2-test-results2.pth') )
-=======
         'validation_targets' : validation_targets,
         }, os.path.join(CHECKPATH,f'Recipe-2-test-results.pth') )
->>>>>>> cleanup
    

@@ -133,6 +133,21 @@ class VideosDataset(Dataset):
         return cls(video_path, exc_dict=None,resize=220,transform=None,starting_point=0,single_video =True)
 
     @classmethod
+    def from_file(cls,path,exercise,max_duration=6,clip_video=False,resize=220):
+        video = VideoScraper.from_file(path,exercise)
+        duration = video.duration
+        print(duration)
+        print(video.filepath)
+        if clip_video:
+            if duration>max_duration:
+                start = (duration-max_duration)//2
+                video.clip_video(start,start+max_duration,replace=True)
+
+        #video_path = f"{path}videos/{video.exercise}/{video.filename}2.{video.quality}"
+        video_path=path
+        return cls(video_path, exc_dict=None,resize=resize,transform=None,starting_point=0,single_video =True)
+
+    @classmethod
     def single_video(cls,path):
         exc_dict=None
         return cls(path, exc_dict,resize=220,transform=None,starting_point=0,single_video =True)

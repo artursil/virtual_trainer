@@ -44,7 +44,7 @@ class ExerciseScraper():
             hashtag=self.exercise
         try:
             create_metadata(self.txt_files_path,self.exercise,max_n_posts)
-        except RunTimeError:
+        except RuntimeError:
             print("RunTimeError")
 
     def __merge_metadata(self):
