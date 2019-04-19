@@ -6,6 +6,8 @@ import re
 import json
 import pandas as pd
 import numpy as np
+import sqlite3
+from drive_utils import *
 from moviepy.editor import *
 #from slugify import slugify
 
@@ -15,6 +17,22 @@ from itertools import chain
 
 EXC_INTER_FEET = ['deadlift','squat','bodyweightsquats']
 
+# def to_database(func,db_path):
+#     def wrapper():
+#         func()
+#         #TODO pass to database
+def save2db(db_path,df,table_name,append=False,schema=None):
+    if db_path.find('instagram')>-1:
+        db_path = db_path.replace('instagram','').replace('//','/')
+    database = f'{db_path}/vtdb.db'
+    download_db(database)
+    conn = sqlite3.connect(database)
+    if append==False:
+        ifexists = 'replace'
+    else:
+        ifexists = 'append'
+    df.to_sql(table_name,conn,schema=schema,if_exists=ifexists)
+    upload_db(database)
 
 def get_config_file(path):
     _path=path.replace("/txt_files","")

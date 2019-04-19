@@ -142,3 +142,5 @@ venv.bak/
 .mypy_cache/
 pyvenv.cfg
 lib64
+videos_scraping.ipynb
+vtdb.db

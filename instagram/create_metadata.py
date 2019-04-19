@@ -10,7 +10,8 @@ EXERCISE = "deadlift"
 # TODO - run this code without parser
 
 def create_metadata(path,exercise,max_n_posts):
-    from instagram_scraper.app import InstagramScraper
+    #from instagram_scraper.app import InstagramScraper
+    from instagram.app import InstagramScraper
 # args_dict = {'username':[exercise],
 #             'tag':True,
 #             'login_user':USERNAME,

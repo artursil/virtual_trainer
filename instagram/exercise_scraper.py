@@ -1,4 +1,5 @@
 import numpy as np
+from slugify import slugify
 from instagram.create_metadata import create_metadata
 from utils import *
 from video_extract import VideoScraper
@@ -47,7 +48,7 @@ class ExerciseScraper():
         except RuntimeError:
             print("RunTimeError")
 
-    def __merge_metadata(self):
+    def __merge_metadata(self,read_df=False):
         files = os.listdir(self.txt_files_path)
         exercise_files = [file for file in files if file.find(self.exercise)>-1 and file.find("json")>-1]
         json_list = []
@@ -56,6 +57,8 @@ class ExerciseScraper():
         else:
             for f in exercise_files:
                 print(f"Using: {f} file")
+        if read_df==True:
+            return pd.read_json(f"{self.txt_files_path}/{exercise_files[0]}")
         for file in exercise_files:
             file_path = f"{self.txt_files_path}/{file}"
             with open(file_path, encoding="utf8") as json_file:  
@@ -64,7 +67,7 @@ class ExerciseScraper():
         return json_list
 
 
-    def __get_stop_words(path,exercise):
+    def __get_stop_words(self,path,exercise):
         _data = self.__read_config()
         exercises_d = _data['exercises']
         exercises = list(chain(*[v for k,v in exercises_d.items() if k!=self.exercise]))
@@ -72,6 +75,10 @@ class ExerciseScraper():
         return exercises, stop_words
 
     def __filter_row(self,row,ix,stop_words,other_exercises,maximum_tags):
+        if isinstance(row,pd.Series):
+            row = row.to_dict()
+        if isinstance(row['tags'],list)==False:
+            row['tags'] = []
         config_json = self.__read_config()
         insta_dict = {}
         is_video = row['is_video'] 
@@ -114,8 +121,8 @@ class ExerciseScraper():
         return insta_dict
 
 
-    def fitler_posts(self,append,max_tags=15,):
-        data = self.__merge_metadata()
+    def fitler_posts(self,append,max_tags=15,read_df=False):
+        data = self.__merge_metadata(read_df=read_df)
         max_kg = self.max_kg
         other_exercises, stop_words = get_stop_words(f"{self.path}",self.exercise)
         maximum_tags = max_tags
@@ -124,15 +131,25 @@ class ExerciseScraper():
         else:
             insta_df = pd.DataFrame()
         ix=0
-        for idx,d in enumerate(data):
-            if idx%10000==0:
-                print(idx)
-            insta_dict = self.__filter_row(d,ix,stop_words,other_exercises,maximum_tags)
-            if bool(insta_dict):
-                ix+=1
-                insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
+        if isinstance(data,pd.DataFrame):
+            for idx,d in data.iterrows():
+                if idx%10000==0:
+                    print(idx)
+                insta_dict = self.__filter_row(d,ix,stop_words,other_exercises,maximum_tags)
+                if bool(insta_dict):
+                    ix+=1
+                    insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
+        else:
+            for idx,d in enumerate(data):
+                if idx%10000==0:
+                    print(idx)
+                insta_dict = self.__filter_row(d,ix,stop_words,other_exercises,maximum_tags)
+                if bool(insta_dict):
+                    ix+=1
+                    insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
         insta_df.drop_duplicates("shortcode",inplace=True)
         insta_df.to_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df.csv",index=False)     
+        save2db(self.path,insta_df,f'{self.exercise}_filtered_df')
         return insta_df
     
     @staticmethod
@@ -161,6 +178,7 @@ class ExerciseScraper():
             df_new.loc[ix,"video_url"]= new_url
             assert df_new.iloc[ix]["video_url"]==new_url
         df_new.to_csv(f"{self.path}/txt_files/{self.exercise}_filtered_df2.csv")
+        save2db(self.path,df_new,f'{self.exercise}_filtered_df2')
 
 
     @staticmethod
@@ -221,6 +239,7 @@ class ExerciseScraper():
             }
         insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
         insta_df.to_csv(filepath,index=False) 
+        save2db(self.path,insta_df,f'{self.exercise}_filtered_df')
 
     def __create_path(self,path):
         if os.path.isdir(path):
@@ -264,6 +283,7 @@ class ExerciseScraper():
                     down_data_df = self.append_df(down_data_df,vid,video.filename,video.filepath,title,\
                                             duration,row['reps'],shortcode,self.exercise,text)
         down_data_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
+        save2db(self.path,down_data_df,f'{self.exercise}_dl_files')
 
     
     def __delete_duplicates(self):
@@ -321,6 +341,7 @@ class ExerciseScraper():
                     down_data_df = self.append_df(down_data_df,vid,video.filename,video.filepath,title,\
                                                 video.duration,row['reps'],shortcode,self.exercise,text)
         down_data_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
+        save2db(self.path,down_data_df,f'{self.exercise}_dl_files')
         self.__delete_additional_videos(down_data_df)
 
 
@@ -396,6 +417,7 @@ class ExerciseScraper():
         down_df.drop(ind_to_drop,axis=0,inplace=True)
         print(f"Number of videos after filtering: {len(down_df)}")
         down_df.to_csv(f"{self.path}/txt_files/{self.exercise}_dl_files.csv",index=False)
+        save2db(self.path,down_df,f'{self.exercise}_dl_files')
         config_json[self.exercise]["ids_to_exclude"] = list(set([int(vid) for vid in vids_to_exclude]))
         config_json[self.exercise]["shortcodes_to_exclude"] = list(set([str(sc) for sc in sc_to_exclude]))
         # print(config_json)
