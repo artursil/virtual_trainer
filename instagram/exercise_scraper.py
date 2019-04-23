@@ -48,7 +48,33 @@ class ExerciseScraper():
         except RuntimeError:
             print("RunTimeError")
 
-    def __merge_metadata(self,read_df=False):
+    @staticmethod
+    def create_json_sample(filepath,sample_size=1000):
+        tmp_json = pd.read_json(filepath)
+        tmp_json.iloc[:sample_size].to_json(f'{filepath.replace(".json","")}_sample.json')
+
+    def __read_df_json(self,filelist,samples=False):
+        full_files = [f for f in filelist if f.find('sample')==-1] 
+        if samples==True:
+            sample_files = [f'{x.replace(".json","")}_sample.json' for x in full_files] 
+            for sample in sample_files:
+                if sample not in filelist:
+                    import pdb; pdb.set_trace() 
+                    filepath = f"{self.txt_files_path}/{sample.replace('_sample','')}"
+                    self.create_json_sample(filepath,20000)
+            filelist=sample_files
+        else:
+            filelist=full_files
+        cat_df = pd.DataFrame()
+        for file in filelist:
+            file_path = f"{self.txt_files_path}/{file}"
+            tmp_df = pd.read_json(file_path)
+            cat_df = cat_df.append(tmp_df)
+            del tmp_df
+        cat_df.drop_duplicates(['shortcode'],inplace=True)
+        return cat_df 
+
+    def __merge_metadata(self,read_df=False,use_sample=False):
         files = os.listdir(self.txt_files_path)
         exercise_files = [file for file in files if file.find(self.exercise)>-1 and file.find("json")>-1]
         json_list = []
@@ -58,7 +84,7 @@ class ExerciseScraper():
             for f in exercise_files:
                 print(f"Using: {f} file")
         if read_df==True:
-            return pd.read_json(f"{self.txt_files_path}/{exercise_files[0]}")
+            return self.__read_df_json(exercise_files,samples=use_sample) 
         for file in exercise_files:
             file_path = f"{self.txt_files_path}/{file}"
             with open(file_path, encoding="utf8") as json_file:  
@@ -120,6 +146,78 @@ class ExerciseScraper():
                                 }
         return insta_dict
 
+    def __filter_df(self,df,stop_words,other_exercises,maximum_tags):
+        config_json = self.__read_config()
+
+        print(f'Number of posts before filtering: {len(df)}')
+
+        videos = sum(df['is_video'])
+        print(f'Number of videos: {videos}')
+
+        df['text'] = df['edge_media_to_caption'].apply(get_text)
+        df['lang'] = df['text'].apply(detect_lang)
+        en_posts= sum(df['lang']=='en')
+        print(f'Number of english posts: {en_posts}')
+
+        df['text_good'] = [analyze_text(x,stop_words+other_exercises) for x in 
+                df['text']]
+        good_posts = sum(df['text_good'])
+        print(f'Number of posts with good description: {good_posts}')
+
+        df['len_urls'] = [len(x)==1 for x in df['urls']]
+        len_urls = sum(df['len_urls'])
+        print(f'Number of posts with one url: {len_urls}')
+
+        df['tags'] = [[] if isinstance(tags,list)==False else [x.lower() for x
+            in tags] for tags in df['tags']]
+        df['len_tags_g'] = [0<len(x)<maximum_tags for x in df['tags']]
+        len_tags_g = sum(df['len_tags_g'])
+        print(f'Number of posts with tags: {len_tags_g}')
+
+        df['tags_good'] = [sum([tag in stop_words+other_exercises for tag in 
+            tags])==0 for tags in df['tags']]
+        tags_good = sum(df['tags_good'])
+        print(f'Number of posts with only good tags: {tags_good}')
+
+        df['crawl'] = False
+        df.loc[(df['lang']=="en") & (df['text']!="") & (df['len_urls']==1) & 
+                (df['text_good']==True) & (df['tags_good']==True) & 
+                (df['len_tags_g']==True),'crawl']=True
+        crawl = sum(df['crawl'])
+        print(f'Number of posts after filters mentioned above: {crawl}')
+
+        df = df.loc[(df['crawl']==True) & (~df['shortcode'] \
+            .isin(config_json[self.exercise]['shortcodes_to_exclude']))]
+
+        df['m'] = df['text'].apply(search_reg)
+        df['m_flg'] = [x==None for x in df['m']]
+        df_m = df[df['m_flg']==False]
+        del df
+        print(f'Number of posts with info about number of reps: {len(df_m)}')
+
+        df_m['reps_n'], df_m['weight'], df_m['mu'] = zip(*[get_reps(m,text) 
+            for m,text in zip(df_m['m'],df_m['text'])])
+        df_m['weight_flg'] = [x==None for x in df_m['weight']]
+        df_m.loc[df_m['weight_flg']==True,'weight'],df_m \
+             .loc[df_m['weight_flg']==True,'mu'] = zip(*[get_weight(text) for 
+              text in df_m.loc[df_m['weight_flg']==True,'text']])
+        df_m['good_weight'] = [check_max_weight(weight,mu,self.max_kg) for 
+                weight,mu in zip(df_m['weight'], df_m['mu'])]
+        df_m['tags'] = [str(x) for x in df_m['tags']]
+        df_m['video_url'] = [x[0] for x in df_m['urls']]
+        df_m['weight'] = [f'{x} {y}' for x,y in zip(df_m['weight'],df_m['mu'])]
+        df_m['likes'] = [x['count'] for x in df_m['edge_liked_by']]
+        df_m['reps'] = df_m['reps_n']
+
+        df_m['exercise'] = self.exercise
+        df_m2 = df_m.loc[df_m['good_weight']==True,['id','shortcode','text',
+            'tags','video_url','video_view_count','likes',
+            'exercise','reps','weight']]
+        df_m2['filename'] = [f"{ix}_{slugify(text)[:50]}" for ix,text in 
+                enumerate(df_m2['text'])]
+        print(f'Final number of posts: {len(df_m2)}')
+
+        return df_m2
 
     def fitler_posts(self,append,max_tags=15,read_df=False):
         data = self.__merge_metadata(read_df=read_df)
@@ -131,14 +229,9 @@ class ExerciseScraper():
         else:
             insta_df = pd.DataFrame()
         ix=0
-        if isinstance(data,pd.DataFrame):
-            for idx,d in data.iterrows():
-                if idx%10000==0:
-                    print(idx)
-                insta_dict = self.__filter_row(d,ix,stop_words,other_exercises,maximum_tags)
-                if bool(insta_dict):
-                    ix+=1
-                    insta_df = insta_df.append(pd.DataFrame(insta_dict,index=[0]),ignore_index=True)
+        if read_df:
+            insta_df = self.__filter_df(data,stop_words, other_exercises,
+                    maximum_tags)
         else:
             for idx,d in enumerate(data):
                 if idx%10000==0:

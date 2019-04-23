@@ -5,12 +5,14 @@ from instagram.download_videos import download_videos
 from instagram.exercise_scraper import ExerciseScraper
 
 PATH = "instagram"
-NUM_OF_POSTS = 400000
+NUM_OF_POSTS = 200000
 IF_DOWNLOAD = False
-exercises = ['cleanandjerk']
+exercises = ['lunge']
 all_tags = {'deadlift':[],
         'squat':[],
-        'cleanandjerk':['cleanandjerk']}
+        'cleanandjerk':['cleanandjerk'],
+        'lunge':['lunge'],
+        'pullup':['pullup']}
 
 
 def main():

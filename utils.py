@@ -12,7 +12,8 @@ from moviepy.editor import *
 #from slugify import slugify
 
 from itertools import chain
-#from langdetect import detect
+from langdetect import detect 
+from langdetect.lang_detect_exception import LangDetectException
 
 
 EXC_INTER_FEET = ['deadlift','squat','bodyweightsquats']
@@ -41,6 +42,10 @@ def get_config_file(path):
     return _data   
 
 def get_stop_words(path,exercise):
+    """get_stop_words
+
+    Returns list of other exercises names and other words from config_file.json
+    """
     # TODO After testing delete stop_words
     # with open(f'{path}/stop_words.json', encoding="utf8") as json_file:
     #     _data = json.load(json_file)
@@ -51,7 +56,19 @@ def get_stop_words(path,exercise):
     stop_words = _data['stop_words']
     return exercises, stop_words
 
+def get_text(container):
+    text_container = container['edges'] 
+    if text_container!=[]:
+        text = text_container[0]['node']['text'].replace(":","")
+    else:
+        text=""
+    return text
+
 def search_reg(title):
+    """search_reg
+
+    Returns information about number of reps and weight.
+    """
     reg1 =r"\d+[a-zA-Z]{0,3}\s{0,1}x\s{0,1}\d+[a-zA-Z]{0,3}"
     reg2 = r"\d+\s{0,1}rep"
     reg3 = r"\d+[a-zA-Z]{0,3}\s{0,1}for\s{0,1}\d+[a-zA-Z]{0,3}"
@@ -90,6 +107,10 @@ def get_reps_wrapper(title):
 
 
 def analyze_text(text,stop_words):
+    """analyze_text
+
+    Returns flag if text contains stop words.
+    """
     _text = text.lower()
     txt_list = _text.split()
     if any(sw in txt_list for sw in stop_words):
@@ -109,7 +130,7 @@ def only_tags(text):
 def detect_lang(text):
     try:
         return detect(text)
-    except:
+    except LangDetectException:
         if only_tags(text):
             return "en"
         else:
