@@ -72,7 +72,8 @@ def search_reg(title):
     reg1 =r"\d+[a-zA-Z]{0,3}\s{0,1}x\s{0,1}\d+[a-zA-Z]{0,3}"
     reg2 = r"\d+\s{0,1}rep"
     reg3 = r"\d+[a-zA-Z]{0,3}\s{0,1}for\s{0,1}\d+[a-zA-Z]{0,3}"
-    m = re.search(f"{reg1}|{reg2}|{reg3}",title)
+    reg4 = r"\d+[a-zA-Z]{0,3}\s{0,1}of\s{0,1}\d+[a-zA-Z]{0,3}"
+    m = re.search(f"{reg1}|{reg2}|{reg3}|{reg4}",title)
     return m
 
 def get_reps(m,text):

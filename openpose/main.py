@@ -21,7 +21,7 @@ EPOCHS=1
 
 def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,path_to_save='default'):
     if path_to_save=='default':
-        path_to_save =f"{path.replace('clipped','processed')}/outputs_df.csv'"
+        path_to_save =f"{path.replace('clipped','processed')}/"
     else:
         path_to_save = f'{path_to_save}/'
     weight_name = './openpose/weights/openpose_mpii_best.pth.tar'
@@ -35,6 +35,7 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,pat
     else:
         transform=None
     dataset = VideosDataset(path,EXC_DICT,200,transform=transform,starting_point=starting_point)
+    import pdb; pdb.set_trace() 
     # X,orig_images,y = dataset[255]
     dl = DataLoader(dataset, batch_size=1,sampler=None)
 

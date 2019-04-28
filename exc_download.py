@@ -5,13 +5,16 @@ from instagram.download_videos import download_videos
 from instagram.exercise_scraper import ExerciseScraper
 
 PATH = "instagram"
-NUM_OF_POSTS = 200000
+NUM_OF_POSTS = 400000
 IF_DOWNLOAD = False
-exercises = ['lunge']
+exercises = ['overheadpress']
 all_tags = {'deadlift':[],
         'squat':[],
         'cleanandjerk':['cleanandjerk'],
         'lunge':['lunge'],
+        'burpees':['burpees'],
+        'benchpress':['benchpress'],
+        'overheadpress':['overheadpress'],
         'pullup':['pullup']}
 
 

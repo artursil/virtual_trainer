@@ -59,7 +59,6 @@ class ExerciseScraper():
             sample_files = [f'{x.replace(".json","")}_sample.json' for x in full_files] 
             for sample in sample_files:
                 if sample not in filelist:
-                    import pdb; pdb.set_trace() 
                     filepath = f"{self.txt_files_path}/{sample.replace('_sample','')}"
                     self.create_json_sample(filepath,20000)
             filelist=sample_files
@@ -151,6 +150,7 @@ class ExerciseScraper():
 
         print(f'Number of posts before filtering: {len(df)}')
 
+        df = df.loc[df['is_video']==True]
         videos = sum(df['is_video'])
         print(f'Number of videos: {videos}')
 
@@ -285,7 +285,11 @@ class ExerciseScraper():
             print(f"Page not found for shortcode: {shortcode}")
             new_url=""
         else:
-            new_url = soup.find('meta', attrs={'property': 'og:video'}).get('content')
+            try:
+                new_url = soup.find('meta', attrs={'property': 'og:video'}).get('content')
+            except AttributeError:
+                print(f"Wasn't able to get new url for shortcode: {shortcode}")
+                return ""
             if new_url=="":
                 print(f"Wasn't able to get new url for shortcode: {shortcode}")
         return new_url
@@ -342,8 +346,8 @@ class ExerciseScraper():
 
     def download_videos(self,append):
 
-        print(f'{self.path}videos/{self.exercise}')
-        self.__create_path(f'{self.path}videos/{self.exercise}')
+        print(f'{self.path}/videos/{self.exercise}')
+        self.__create_path(f'{self.path}/videos/{self.exercise}')
         self.__delete_duplicates()
         df = self.__read_download_files()
         if append==True:
@@ -354,7 +358,7 @@ class ExerciseScraper():
             if ix % 10==0:
                 print(ix) 
             vid = row['id']
-            url = row['video_url']
+            url = self.get_new_url(row['shortcode'])
             text = slugify(row["text"]).replace("-"," ")
             title = slugify(row['text'])[:50]
             filename = row['filename']
@@ -363,6 +367,8 @@ class ExerciseScraper():
                 print(f"{title} already downloaded")
                 continue
             if type(url)!=str:
+                continue
+            elif url.find('instagram')==-1:
                 continue
             video = VideoScraper(url,self.path,self.exercise,video_type="other",filename=filename)
             if video.error==False:
