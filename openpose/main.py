@@ -35,7 +35,6 @@ def main(path,starting_point,save_img=False,swapped=False,time_verbose=False,pat
     else:
         transform=None
     dataset = VideosDataset(path,EXC_DICT,200,transform=transform,starting_point=starting_point)
-    import pdb; pdb.set_trace() 
     # X,orig_images,y = dataset[255]
     dl = DataLoader(dataset, batch_size=1,sampler=None)
 

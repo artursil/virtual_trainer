@@ -6,6 +6,7 @@ from PIL import Image
 from utils import *
 import torchvision.transforms as transforms
 from openpose.preprocessing import rtpose_preprocess, vgg_preprocess, crop_with_factor
+from youtube_dl.utils import DownloadError
 
 class VideoScraper:
     def __init__(self,url,base_path,exercise,quality="mp4",video_type="youtube", *args, **kwargs):
@@ -71,8 +72,10 @@ class VideoScraper:
             print('File already exists')
         else:
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([self.url, ])
-                    # raise ValueError(f"Problem with this url: {self.url}")
+                try:
+                    ydl.download([self.url, ])
+                except DownloadError:
+                    print(f"Problem with this url: {self.url}")
             self.__delete_audio_files()
 
     def __delete_audio_files(self):
@@ -124,14 +127,18 @@ class VideoScraper:
         return self.filepath.replace('/videos/','/videos/clipped/')
 
     def save_clipped(self,start_t,end_t,n_clip):
-        my_clip = self.clip_video(start_t,end_t)
-        if os.path.isdir("/".join(self.clipped_path.split("/")[:-1]))==False:
-            os.makedirs("/".join(self.clipped_path.split("/")[:-1]))
-        if os.path.isfile(self.clipped_path):
-            print("Clipped version of this file exists")
+        try:
+            my_clip = self.clip_video(start_t,end_t)
+        except ValueError:
+            print("Start value bigger than clip's duration")
         else:
-            my_clip.write_videofile(f"{self.clipped_path}_{n_clip}.mp4")
-            my_clip.close()
+            if os.path.isdir("/".join(self.clipped_path.split("/")[:-1]))==False:
+                os.makedirs("/".join(self.clipped_path.split("/")[:-1]))
+            if os.path.isfile(self.clipped_path):
+                print("Clipped version of this file exists")
+            else:
+                my_clip.write_videofile(f"{self.clipped_path}_{n_clip}.mp4")
+                my_clip.close()
 
     def generate_filepath(self):
         return f'{self.base_path}videos/{self.exercise}/{self.filename}'

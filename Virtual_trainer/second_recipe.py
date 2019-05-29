@@ -18,6 +18,8 @@ import numpy as np
 from models.semantic import NaiveBaselineModel, NaiveStridedModel
 from dataloader import *
 from simple_generators import SimpleSequenceGenerator
+from neptune_connector.np_config import NEPTUNE_TOKEN
+import neptune
 
 try:
     # Create checkpoint directory if it does not exist
@@ -30,17 +32,19 @@ CHECKPATH = 'checkpoint'
 # Data mountpoint
 DATAPOINT = "Data"
 
+PROJECT_NAME = 'VT-combined'
+EXPERIMENT_NAME = f'recipe2-newexc-1'
 # --- Datasets ---
 # H36M Ground truths
 h36m_file = os.path.join(DATAPOINT,'Keypoints','data_2d_h36m_gt.npz')
 action_list=['Walking','Waiting','SittingDown']
 subjects = ['S1','S5','S6','S7','S8']
 # Instagram Openpose estimations
-instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints.csv')
+instagram_file = os.path.join(DATAPOINT,'Keypoints','keypoints_newexc.csv')
 ucf_file = os.path.join(DATAPOINT,'Keypoints','keypoints_rest.csv')
 ucf_file_test = os.path.join(DATAPOINT,'Keypoints','keypoints_rest_test.csv')
 # --- Parameters ---
-batch_size = 64
+batch_size = 512
 epochs = 20
 embedding_len = 128
 lr, lr_decay = 0.001 , 0.95 
@@ -55,6 +59,16 @@ filter_widths2 = [7,7]
 channels = 1024
 in_joints, in_dims, out_joints = 17, 2, 17
 
+neptune.init(api_token=NEPTUNE_TOKEN,
+         project_qualified_name=f'artursil/{PROJECT_NAME}')
+neptune.create_experiment(EXPERIMENT_NAME,
+                      params={'filter_widths_top': ",".join([str(f) for f in filter_widths2]),
+                              'embedding_len': embedding_len,
+                              'batch_size':batch_size,
+                              'lr':lr,
+                              'lr_decay':lr_decay,
+                              
+                              })
 # load dataset
 action_op, poses_op, vid_idx = fetch_openpose_keypoints(instagram_file)
 action_op2, poses_op2, vid_idx2 = fetch_openpose_keypoints(ucf_file)
@@ -128,6 +142,7 @@ while epoch < epochs:
         optimizer.zero_grad()
         pred = trn_model(poses)
         batch_loss = loss_fun(pred, action)
+        neptune.send_metric('batch_loss', batch_loss)
         print('{{"metric": "Batch Loss", "value": {}}}'.format(batch_loss))
         epoch_loss_train.append(batch_loss.detach().cpu().numpy()) 
         batch_loss.backward()
@@ -160,6 +175,8 @@ while epoch < epochs:
             np.mean(epoch_loss_train), epoch)) 
     print('{{"metric": "Validation Loss", "value": {}, "epoch": {}}}'.format(
             np.mean(epoch_loss_test), epoch)) 
+    neptune.send_metric('training_loss', np.mean(epoch_loss_train))
+    neptune.send_metric('val_loss', np.mean(epoch_loss_test))
 
     # checkpoint every epoch
     torch.save({
@@ -177,3 +194,4 @@ while epoch < epochs:
     epoch += 1
     generator.next_epoch()  
       
+neptune.stop()

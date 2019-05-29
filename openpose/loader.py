@@ -9,21 +9,32 @@ from video_extract import VideoScraper
 import torchvision.transforms as transforms
 from hashlib import md5
 
+# EXC_DICT = {
+#             0:'squat',
+#             1:'deadlift',
+#             2:'pushups',
+#             3:'pullups',
+#             4:'wallpushups',
+#             5:'lunges',
+#             6:'squats',
+#             7:'cleanandjerk',
+#             8:'jumprope',
+#             9:'soccerjuggling',
+#             10:'taichi',
+#             11:'jumprope',
+#             12:'golfswing',
+#             13:'bodyweightsquats'
+#             
+# }
 EXC_DICT = {
             0:'squat',
             1:'deadlift',
-            2:'pushups',
-            3:'pullups',
-            4:'wallpushups',
-            5:'lunges',
-            6:'squats',
-            7:'cleanandjerk',
-            8:'jumprope',
-            9:'soccerjuggling',
-            10:'taichi',
-            11:'jumprope',
-            12:'golfswing',
-            13:'bodyweightsquats'
+            2:'benchpress',
+            3:'pullup',
+            4:'overheadpress',
+            5:'lunge',
+            6:'other',
+            7:'cleanandjerk'
             
 }
 

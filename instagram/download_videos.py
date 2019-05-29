@@ -38,6 +38,8 @@ def download_videos(df,path):
         title = slugify(row['text'])[:50]
         filename = row['filename']
         video = VideoScraper(url,base_path,exercise,video_type="other",filename=filename)
+        print(video.error)
+        import pdb; pdb.set_trace() 
         if video.error==False:
             success = video.download_video()
             if success:
