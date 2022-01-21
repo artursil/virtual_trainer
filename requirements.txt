@@ -22,7 +22,7 @@ imageio==2.5.0
 imageio-ffmpeg==0.2.0
 instagram-scraper==1.5.41
 ipykernel==5.1.0
-ipython==7.4.0
+ipython==7.16.3
 ipython-genutils==0.2.0
 ipywidgets==7.4.2
 jedi==0.13.3
